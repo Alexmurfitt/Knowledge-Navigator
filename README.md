@@ -113,17 +113,25 @@ graph TD
 
 ## 📂 Estructura del Proyecto
 
+## 📂 Estructura del Proyecto
+
 Knowledge_Navigator/
 ├── backend/
-│   
+│ ├── main.py
+│ ├── rag_engine.py
+│ ├── utils.py
+│ └── requirements.txt
 ├── frontend/
-│   
+│ └── app.py
 ├── data/
-│   
-│   
+│ ├── embeddings/
+│ ├── memory/
+│ └── pdfs/
 ├── Scripts/
-├
-├
+├── tests/
+├── .env
+├── .gitignore
+├── Dockerfile
 ├── requirements.txt
 └── README.md
 
