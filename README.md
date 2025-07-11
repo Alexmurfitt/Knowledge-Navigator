@@ -1,4 +1,4 @@
-# SmartAssistAI Pro
+# Knowledge Navigator
 
 Asistente inteligente multimodal con IA generativa, razonamiento autónomo y escalabilidad profesional.
 
@@ -41,14 +41,13 @@ Su misión es transformar información compleja en conocimiento útil y contextu
 
 ## ⚙️ Instalación y Requisitos
 
-```bash
 git clone https://github.com/tuusuario/smartassistai.git
 cd smartassistai
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 streamlit run frontend/app.py
-```
+
 
 ### Requisitos
 
@@ -111,62 +110,25 @@ graph TD
 
 ## 📂 Estructura del Proyecto
 
-```
-AI_Knowledge_Navigator/
+Knowledge_Navigator/
 ├── backend/
-│   ├── main.py
-│   ├── rag_engine.py
-│   ├── agent_executor.py
-│   ├── ocr_engine.py
-│   ├── whisperx_transcriber.py
-│   ├── memory_manager.py
-│   ├── summarizer.py
-│   └── security.py
+│   
 ├── frontend/
-│   ├── app.py
-│   └── components/
+│   
 ├── data/
-│   ├── uploads/
-│   └── vector_db/
-├── assets/
-├── tests/
-├── .env
+│   
+│   
+├── Scripts/
+├
+├
 ├── requirements.txt
 └── README.md
-```
-
----
-
-## 🤝 Contribución
-
-¡Toda ayuda es bienvenida!
-
-1. Haz un fork del repositorio
-2. Crea una rama (`git checkout -b feature/nueva-funcion`)
-3. Haz commit de tus cambios
-4. Abre un Pull Request
 
 ### Equipo
 
-* Alexander Murfitt — Coordinación, arquitectura y desarrollo
-* Nombre 2 — Backend e IA
-* Nombre 3 — Interfaz y experiencia de usuario
-
----
-
-## 🛡️ Licencia
-
-Este proyecto está bajo licencia MIT. Consulta el archivo `LICENSE` para más detalles.
-
----
-
-## 📨 Contacto
-
-* Email: [alexander@email.com](mailto:alexander@email.com)
-* Web: [www.smartassistai.com](http://www.smartassistai.com)
-* GitHub: [@alexmurfitt](https://github.com/alexmurfitt)
-
----
+* Alexander Murfitt 
+* Aaron
+* Eugenio
 
 ## ✨ Bonus
 
