@@ -2,7 +2,10 @@
 
 Asistente inteligente multimodal con IA generativa, razonamiento autónomo y escalabilidad profesional.
 
----
+# Enlace documento Google Drive:
+
+https://docs.google.com/document/d/1FdvMoNgEYl9LZxdObe8eGxLVGUH_rx3RiR9JgyT_tO8/edit?tab=t.js3ami4q4gx
+
 
 ## 🌟 Descripción del Proyecto
 
