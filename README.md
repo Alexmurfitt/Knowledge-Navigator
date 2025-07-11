@@ -135,6 +135,11 @@ Knowledge_Navigator/
 ├── requirements.txt
 └── README.md
 
+Copiar
+Editar
+
+
+
 ### Equipo
 
 * Alexander Murfitt 
