@@ -1,0 +1,42 @@
+# Core Backend
+fastapi
+uvicorn[standard]
+python-dotenv
+httpx
+pydantic
+
+# LLM & RAG
+openai
+langchain
+chromadb
+sentence-transformers
+tiktoken
+
+# OCR y Multimodal
+pdf2image
+pytesseract
+transformers
+layoutparser
+layoutparser[ocr]
+opencv-python
+
+# Frontend (Streamlit)
+streamlit
+streamlit-extras
+
+# Seguridad
+python-jose[cryptography]
+cryptography
+passlib[bcrypt]
+
+# Memoria y Base de Datos
+pymongo
+chromadb
+
+# Voice (opcional para WhisperX)
+torchaudio
+whisperx @ git+https://github.com/m-bain/whisperx
+
+# Testing
+pytest
+httpx

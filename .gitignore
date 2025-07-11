@@ -1,0 +1,21 @@
+# Entorno virtual
+venv/
+
+# Archivos Python
+__pycache__/
+*.py[cod]
+*.log
+
+# Entornos y configuración local
+.env
+.DS_Store
+Thumbs.db
+
+# Archivos de desarrollo de frontend (Streamlit)
+.streamlit/secrets.toml
+
+# Datos temporales o sensibles
+*.sqlite
+*.db
+data/embeddings/
+data/memory/
