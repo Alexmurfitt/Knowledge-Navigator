@@ -1,6 +1,6 @@
 # Entorno virtual
 venv/
-
+Knowledge-Navigator/
 # Archivos Python
 __pycache__/
 *.py[cod]
