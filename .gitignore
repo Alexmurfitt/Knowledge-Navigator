@@ -1,6 +1,6 @@
 # Entorno virtual
 venv/
-
+my_env/
 # Archivos Python
 __pycache__/
 *.py[cod]
@@ -19,3 +19,12 @@ Thumbs.db
 *.db
 data/embeddings/
 data/memory/
+
+# otros
+Makefile
+requirements.txt/
+MIREADME.md 
+setup_env.sh/
+faiss.md
+
+
