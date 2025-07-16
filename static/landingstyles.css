@@ -1,3 +1,4 @@
+/* landing.css */
 * {
   margin: 0;
   padding: 0;
@@ -5,7 +6,7 @@
 }
 
 body {
-  font-family: 'Segoe UI', sans-serif;
+  font-family: 'Inter', sans-serif;
   background: linear-gradient(to bottom, #f0f4ff, #ffffff);
   color: #333;
   padding: 20px;
@@ -108,7 +109,7 @@ nav a.btn {
   padding: 20px 30px;
   border-radius: 12px;
   text-align: center;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
   min-width: 180px;
 }
 

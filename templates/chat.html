@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DocuChat - Chat</title>
+  <link rel="stylesheet" href="../static/chatstyles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="chat-interface">
+  <header class="chat-header">
+    <h1><a href="landing.html">Knowledge Navigator</a></h1>
+  </header>
+
+  <main>
+    <section class="uploader">
+      <h2>Upload your PDFs</h2>
+      <input type="file" id="pdfFiles" multiple />
+      <button onclick="uploadPDFs()">Upload</button>
+    </section>
+
+    <section class="chatbox">
+<div id="chatBox" style="max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+  <!-- Aquí se mostrarán los mensajes -->
+</div>
+
+<input type="text" id="question" placeholder="Escribe tu pregunta" style="width: 80%;">
+<button onclick="askBot()">Enviar</button>
+
+    </section>
+  </main>
+
+  <script>
+    async function uploadPDFs() {
+      const files = document.getElementById("pdfFiles").files;
+      const formData = new FormData();
+      for (let file of files) formData.append("files", file);
+
+      try {
+        const res = await fetch("http://localhost:5500/upload", {
+          method: "POST",
+          body: formData
+        });
+
+        const contentType = res.headers.get("content-type");
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Error del servidor (${res.status}): ${text}`);
+        }
+
+        if (contentType && contentType.includes("application/json")) {
+          const data = await res.json();
+          alert(data.message);
+        } else {
+          const text = await res.text();
+          alert("Respuesta no es JSON: " + text);
+        }
+
+      } catch (err) {
+        console.error("Error al subir archivos:", err);
+        alert("Error al subir archivos.");
+      }
+    }
+
+
+async function askBot() {
+    const question = document.getElementById("question").value;
+    if (!question.trim()) return;
+
+    // Añadir pregunta del usuario al chat
+    appendMessage("Tú", question);
+
+    // Limpiar input
+    document.getElementById("question").value = "";
+
+    try {
+      const res = await fetch("http://localhost:5500/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question })
+      });
+
+      const data = await res.json();
+      appendMessage("Bot", data.answer);
+    } catch (error) {
+      console.error("Error:", error);
+      appendMessage("Bot", "Ocurrió un error al obtener la respuesta.");
+    }
+  }
+
+  // Función para agregar mensajes al chatBox
+  function appendMessage(sender, message) {
+    const chatBox = document.getElementById("chatBox");
+    const msgDiv = document.createElement("div");
+    msgDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
+    msgDiv.style.marginBottom = "10px";
+    chatBox.appendChild(msgDiv);
+    chatBox.scrollTop = chatBox.scrollHeight; // Scroll automático hacia abajo
+  }
+  </script>
+</body>
+
+</html>
