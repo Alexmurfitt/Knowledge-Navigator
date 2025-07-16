@@ -5,11 +5,19 @@ from langchain_ollama import OllamaEmbeddings
 from langchain_qdrant import QdrantVectorStore 
 from qdrant_client import QdrantClient
 from dotenv import load_dotenv
+from qdrant_client import QdrantClient, models  #PAra poder acceder a la base de datos y eliminar points
 import os
 import tempfile
+from Accion_Qdrant import *
 
 load_dotenv()
 
+# google_api_key = os.getenv("GOOGLE-API-KEY")    #Seleecionamos la apikey del modelo
+qdrant_url = os.getenv("QDRANT-URL")
+qdrant_api_key = os.getenv("QDRANT-API-KEY")
+collection_name = os.getenv("COLLECTION-NAME")
+
+crear_indice(collection_name=collection_name)
 
 def extract_text_from_pdf(pdf_file):
     """Extrae el texto de un archivo PDF subido."""
@@ -29,8 +37,8 @@ def extract_text_from_pdf(pdf_file):
 def split_text_into_chunks(documents):
     """Divide los documentos extraídos en trozos (chunks) más pequeños."""
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=100,
+        chunk_size=400,
+        chunk_overlap=50,
         length_function=len
     )
     chunks = text_splitter.split_documents(documents)
@@ -60,6 +68,8 @@ if uploaded_files:
             for pdf_file in uploaded_files:
                 st.write(f"Leyendo `{pdf_file.name}`...")
                 docs = extract_text_from_pdf(pdf_file)
+                for doc in docs:
+                    doc.metadata["document_name_id"] = pdf_file.name
                 all_docs.extend(docs)
             
             chunks = split_text_into_chunks(all_docs)
@@ -76,12 +86,21 @@ if uploaded_files:
                 QdrantVectorStore.from_documents(
                     documents=chunks,
                     embedding=embeddings,
-                    url=os.getenv("qdrant_url"),
-                    api_key=os.getenv("qdrant_api_key"),
-                    collection_name="Prueba_RAG", # Tiene que ser le mismo nombre que tengo en Qdrant
+                    url=qdrant_url,
+                    api_key=qdrant_api_key,
+                    collection_name=collection_name, # Tiene que ser le mismo nombre que tengo en Qdrant
                     force_recreate=False # Poner en False para no borrarla cada vez
                 )
+            
+
                 st.success(f"¡Éxito! Se han procesado y añadido {len(chunks)} fragmentos de texto a la colección 'Prueba_RAG'.")
 
             except Exception as e:
                 st.error(f"Ha ocurrido un error al conectar o subir a Qdrant: {e}")
+
+            
+
+    
+
+
+    
