@@ -116,24 +116,33 @@ graph TD
 ## 📂 Estructura del Proyecto
 
 Knowledge_Navigator/
-├── backend/
-│ ├── main.py
-│ ├── rag_engine.py
-│ ├── utils.py
-│ └── requirements.txt
-├── frontend/
-│ └── app.py
-├── data/
-│ ├── embeddings/
-│ ├── memory/
-│ └── pdfs/
-├── Scripts/
-├── tests/
-├── .env
-├── .gitignore
-├── Dockerfile
-├── requirements.txt
-└── README.md
+.
+├── backend/                          # (Vacío o reservado) Para lógica de servidor si se despliega como API
+├── data/                             # Datos de entrada del sistema
+│   ├── pdfs/                         # Documentos fuente utilizados para generar embeddings
+│   │   ├── 1. Framework for the Ethical Use of Advanced Data Science.pdf     # Documento base sobre ética en ciencia de datos
+│   │   ├── 2. Governing AI: Upholding Human Rights (Data & Society).pdf      # Ética y derechos humanos en IA
+│   │   ├── 3. AI and Human Society – Japón\012.pdf                           # Perspectiva japonesa sobre IA y sociedad
+│   │   ├── 4. Tech Ethics Best Practices – Markkula Center.pdf               # Buenas prácticas éticas en tecnología
+│   │   ├── 5. Gobernanza algorítmica y auditoría de sesgo (Bustelo).pdf     # Control y auditoría de sesgos algorítmicos
+│   │   ├── 6. IA y Derecho de Daños (Berenguer et al.).pdf                  # Marco legal de responsabilidad por IA
+│   │   ├── 7. IA y Transparencia Algorítmica – G. Vestri.pdf                # Transparencia y trazabilidad en IA
+│   │   └── CONTENIDOPDF1_7.md           # Resumen general del contenido de los 7 PDF
+│   └── PREGUNTAS.md                    # Conjunto de preguntas de prueba para testear el sistema
+├── frontend/                          # Interfaz de usuario (actualmente vacía o mínima)
+├── Makefile                           # Comandos automatizados para configurar, ejecutar y limpiar el proyecto
+├── README.md                          # Descripción general del proyecto para usuarios y desarrolladores
+├── requirements.txt                   # Dependencias Python reales necesarias para ejecutar el sistema
+├── setup_env.sh                       # Script para crear entorno virtual e instalar dependencias automáticamente
+├── scripts/                           # Scripts funcionales del sistema
+│   ├── ask_pdf_qdrant_mongodb.py     # Asistente conversacional principal (RAG + memoria + MongoDB + JSON)
+│   ├── detectar_similitud.py         # Compara preguntas nuevas con historial (detección semántica redundante)
+│   ├── evaluar_con_ragas.py          # Evaluación automática del sistema usando RAGAS (fidelidad, relevancia, etc.)
+│   ├── historial.json                # Registro local en JSON de preguntas, respuestas y fuentes usadas
+│   ├── ingest_pdf_qdrant.py          # Carga, divide y sube PDFs a Qdrant generando embeddings
+│   ├── razonador_cot.py              # Módulo de razonamiento paso a paso con auto-preguntas (Chain-of-Thought)
+│   └── verificar_documento_qdrant.py # Verifica si un documento PDF ya ha sido indexado en Qdrant (por nombre o similitud)
+
 
 ### Equipo
 
