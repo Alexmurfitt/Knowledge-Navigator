@@ -10,27 +10,42 @@
 </head>
 
 <body class="chat-interface">
-  <header class="chat-header">
-    <h1><a href="landing.html">Knowledge Navigator</a></h1>
+  <header class="navbar">
+    <div class="logo"><strong>Knowledge</strong> <span class="sub">Navigator</span></div>
+    <nav>
+
+      <a class="home-btn" href="landing.html">Home</a>
+      <a class="chat-btn" href="chat.html">Chat</a>
+      <a class="docs-btn" href="documents.html">Documents</a>
+
+      <a href="#">Sign In</a>
+      <a href="#" class="btn-primary">Get Started</a>
+    </nav>
   </header>
 
-  <main>
-    <section class="uploader">
-      <h2>Upload your PDFs</h2>
+  <main class="chat-wrapper">
+    <div class="chat-header">
+      <div class="chat-header-title">
+        <span class="chat-icon">🤖</span> Document Assistant
+      </div>
       <input type="file" id="pdfFiles" multiple />
-      <button onclick="uploadPDFs()">Upload</button>
-    </section>
+      <button onclick="uploadPDFs()" class="upload-btn">Upload PDF</button>
+    </div>
 
-    <section class="chatbox">
-<div id="chatBox" style="max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
-  <!-- Aquí se mostrarán los mensajes -->
-</div>
+    <div id="chatBox" class="chat-messages">
+      <div class="message bot">
+        <p>Hola! soy el asistente de documentos de tu empresa. Sube tu PDF en la sección de documentos y te ayudaré a
+          encontrar lo que buscas en tus documentos, qué te gustaría saber?</p>
+        <span class="timestamp">11:21:08 PM</span>
+      </div>
+    </div>
 
-<input type="text" id="question" placeholder="Escribe tu pregunta" style="width: 80%;">
-<button onclick="askBot()">Enviar</button>
-
-    </section>
+    <div class="chat-input">
+      <input type="text" id="question" placeholder="Ask a question about your documents..." />
+      <button onclick="askBot()">➤</button>
+    </div>
   </main>
+
 
   <script>
     async function uploadPDFs() {
@@ -65,40 +80,49 @@
     }
 
 
-async function askBot() {
-    const question = document.getElementById("question").value;
-    if (!question.trim()) return;
+    async function askBot() {
+      const question = document.getElementById("question").value;
+      if (!question.trim()) return;
 
-    // Añadir pregunta del usuario al chat
-    appendMessage("Tú", question);
+      // Añadir pregunta del usuario al chat
+      appendMessage("Tú", question);
 
-    // Limpiar input
-    document.getElementById("question").value = "";
+      // Limpiar input
+      document.getElementById("question").value = "";
 
-    try {
-      const res = await fetch("http://localhost:5500/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question })
-      });
+      try {
+        const res = await fetch("http://localhost:5500/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question })
+        });
 
-      const data = await res.json();
-      appendMessage("Bot", data.answer);
-    } catch (error) {
-      console.error("Error:", error);
-      appendMessage("Bot", "Ocurrió un error al obtener la respuesta.");
+        const data = await res.json();
+        appendMessage("Bot", data.answer);
+      } catch (error) {
+        console.error("Error:", error);
+        appendMessage("Bot", "Ocurrió un error al obtener la respuesta.");
+      }
     }
-  }
 
-  // Función para agregar mensajes al chatBox
-  function appendMessage(sender, message) {
-    const chatBox = document.getElementById("chatBox");
-    const msgDiv = document.createElement("div");
-    msgDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
-    msgDiv.style.marginBottom = "10px";
-    chatBox.appendChild(msgDiv);
-    chatBox.scrollTop = chatBox.scrollHeight; // Scroll automático hacia abajo
-  }
+    // Función para agregar mensajes al chatBox
+    function appendMessage(sender, message) {
+      const chatBox = document.getElementById("chatBox");
+      const msgDiv = document.createElement("div");
+      msgDiv.classList.add("message", sender === "Tú" ? "user" : "bot");
+
+      const msgContent = document.createElement("p");
+      msgContent.textContent = message;
+
+      const timestamp = document.createElement("span");
+      timestamp.classList.add("timestamp");
+      timestamp.textContent = new Date().toLocaleTimeString();
+
+      msgDiv.appendChild(msgContent);
+      msgDiv.appendChild(timestamp);
+      chatBox.appendChild(msgDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
   </script>
 </body>
 

@@ -1,39 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Knowledge Navigator</title>
-    <link rel="stylesheet" href="../static/landingstyles.css"> 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <header class="navbar">
-      <div class="logo">🔷 <strong>Knowledge</strong> <span class="sub">Navigator</span></div>
-      <nav>
-        <a href="landing.html">Home</a>
-        <a href="chat.html">Chat</a>
-        <a href="documents.html">Documents</a>
-        <a href="#">Sign In</a>
-        <a href="#" class="btn-primary">Get Started</a>
-      </nav>
-    </header>
 
-    <main class="hero">
-      <h1>Transform Your Enterprise<br><span class="highlight">Documents into Intelligence</span></h1>
-      <p>
-        Upload your company PDFs and get instant, intelligent answers through our AI-powered chatbot. Streamline knowledge sharing and boost productivity across your organization.
-      </p>
-      <div class="buttons">
-        <a href="chat.html" class="btn-primary">Start Chatting →</a>
-        <a href="#" class="btn-outline">View Demo</a>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Knowledge Navigator</title>
+  <link rel="stylesheet" href="../static/landingstyles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <header class="navbar">
+    <div class="logo">Knowledge Navigator</div>
+    <nav>
+
+      <a class="home-btn" href="landing.html">Home</a>
+      <a class="chat-btn" href="chat.html">Chat</a>
+      <a class="docs-btn" href="documents.html">Documents</a>
+
+      <a href="#">Sign In</a>
+      <a href="#" class="btn-primary">Get Started</a>
+    </nav>
+  </header>
+
+  <main class="hero">
+    <h1>Transform Your Enterprise<br><span class="highlight">Documents into Intelligence</span></h1>
+    <p class="paragraph">
+      Upload your company PDFs and get instant, intelligent answers through our AI-powered chatbot. Streamline knowledge
+      sharing and boost productivity across your organization.
+    </p>
+    <a href="chat.html" class="startchatting-btn">Start Chatting</a>
+    <div class="stats">
+      <div class="card">
+        <div>👥</div>500+
+        <p>Enterprise Clients</p>
+      </div>
+      <div class="card">
+        <div>🛡️</div>99.9%
+        <p>Security Uptime</p>
+      </div>
+      <div class="card">
+        <div>⚡</div>3s
+        <p>Average Response</p>
+      </div>
+    </div>
+  </main>
+
+  <section class="features-section">
+    <h2 class="section-title">Powerful Features for Modern Enterprises</h2>
+    <p class="section-subtitle">Everything you need to transform your document management and knowledge sharing
+      processes.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="icon-box upload-icon">⬆️</div>
+        <h3>Easy Document Upload</h3>
+        <p>Drag and drop PDFs directly into the system. Support for multiple file formats and batch uploads.</p>
       </div>
 
-      <div class="stats">
-        <div class="card"><div>👥</div><strong>500+</strong><p>Enterprise Clients</p></div>
-        <div class="card"><div>🛡️</div><strong>99.9%</strong><p>Security Uptime</p></div>
-        <div class="card"><div>⚡</div><strong>3s</strong><p>Average Response</p></div>
+      <div class="feature-card">
+        <div class="icon-box chat-icon">💬</div>
+        <h3>Intelligent Chat</h3>
+        <p>Ask questions in natural language and get precise answers from your documents instantly.</p>
       </div>
-    </main>
-  </body>
+
+      <div class="feature-card">
+        <div class="icon-box shield-icon">🛡️</div>
+        <h3>Enterprise Security</h3>
+        <p>Bank-level encryption, compliance with SOC 2, GDPR, and complete data privacy protection.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="icon-box search-icon">🔍</div>
+        <h3>Advanced Search</h3>
+        <p>Powerful search across all documents with context-aware results and semantic understanding.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="icon-box team-icon">👥</div>
+        <h3>Team Collaboration</h3>
+        <p>Share documents and insights across teams with role-based access control and permissions.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="icon-box lightning-icon">⚡</div>
+        <h3>Real-time Processing</h3>
+        <p>Lightning-fast document processing and instant responses powered by advanced AI models.</p>
+      </div>
+    </div>
+  </section>
+
+</body>
+
 </html>
