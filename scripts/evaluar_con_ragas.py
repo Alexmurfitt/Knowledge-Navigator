@@ -1,26 +1,35 @@
+import json
 from ragas import evaluate
 
-# Preparar tus datos: preguntas, respuestas y contextos
-questions = ["¿Qué problemas plantea la falta de estándares cruzados en el uso de la ciencia de datos en el sector humanitario?"]
-answers = ["La falta de estándares cruzados puede generar problemas como la dificultad para comparar datos y la falta de reproducibilidad."]
-contexts = [
-    [
-        {"source": "Documento 1", "content": "La falta de estándares cruzados puede llevar a inconsistencias en la toma de decisiones."}
-    ]
-]
+# Cargar historial de interacciones desde archivo JSON
+with open("scripts/historial.json", "r", encoding="utf-8") as f:
+    historial = json.load(f)
 
-# Agrupar los datos en un formato adecuado para RAGAS
-dataset = [
-    {
-        "question": q,
-        "answer": a,
-        "context": c
-    }
-    for q, a, c in zip(questions, answers, contexts)
-]
+# Extraer datos: preguntas, respuestas y contextos
+dataset = []
 
-# Evaluar con RAGAS
+for entry in historial:
+    pregunta = entry.get("pregunta")
+    respuesta = entry.get("respuesta")
+    contexto = entry.get("contexto")  # Asegúrate de guardar contexto como lista de dicts con 'content' y 'source'
+
+    if pregunta and respuesta and contexto:
+        dataset.append({
+            "question": pregunta,
+            "answer": respuesta,
+            "context": contexto
+        })
+
+# Validación mínima
+if not dataset:
+    print("❌ No se encontraron datos con pregunta, respuesta y contexto. Verifica historial.json")
+    exit()
+
+# Evaluar
+print("📊 Ejecutando evaluación automática con RAGAS...")
 metrics = evaluate(dataset)
 
 # Mostrar resultados
-print(metrics)
+print("\n✅ Resultados de evaluación:")
+for k, v in metrics.items():
+    print(f"{k}: {v:.4f}")

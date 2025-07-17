@@ -21,10 +21,8 @@ data/embeddings/
 data/memory/
 
 # otros
-Makefile
 requirements.txt/
-MIREADME.md 
 setup_env.sh/
-faiss.md
+
 
 
