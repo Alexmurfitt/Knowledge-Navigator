@@ -11,7 +11,7 @@ COLLECTION-NAME = ""
 2) Los archivos que subo estan en backend - App - Chat. (As)
     Archivos:
 
-    Scripts_Chat.py
+    Chat_Inteligente.py
     Accion_Qdrant.py
     requirements_chat.txt
     pages/
@@ -26,4 +26,4 @@ COLLECTION-NAME = ""
 
 5) Ejecutar el streamlit para usarlo (Tener en cuenta en que carpeta estas)
 
-    streamlit run Scripts_Chat.py
+    streamlit run Chat_Inteligente.py
