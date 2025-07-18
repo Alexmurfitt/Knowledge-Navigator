@@ -5,16 +5,19 @@ import re
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from langchain_ollama import ChatOllama, OllamaEmbeddings
-from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
+from langchain.memory import ConversationBufferMemory
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 
-# ✅ Dos razonadores modernos
-from razonador_chain import razonador_chain
-from razonador_cot import razonamiento_cot
+# Nuevo import para evitar deprecación en historial (requiere `pip install langchain-mongodb`)
+from langchain_mongodb.chat_message_histories import MongoDBChatMessageHistory
 
-# 🧪 Cargar variables de entorno
+# ✅ Razonadores personalizados
+from razonador_chain import razonador_chain
+from razonador_cot_limpio import razonamiento_cot
+
+# 🧪 Cargar entorno
 load_dotenv()
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
@@ -22,27 +25,30 @@ MONGO_URI = os.getenv("MONGO_URI")
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")
 
 if not MONGO_DB_NAME:
-    raise ValueError("❌ MONGO_DB_NAME no está definido. Verifica tu archivo .env")
+    raise ValueError("❌ MONGO_DB_NAME no está definido. Revisa el archivo .env")
 
-# 🔐 MongoDB
+# 🔐 Conexión MongoDB
 mongo_client = MongoClient(MONGO_URI)
 mongo_db = mongo_client[MONGO_DB_NAME]
 mongo_collection = mongo_db["historial"]
 
-# 🧠 Modelos
+# 💬 LLM + Embeddings
 llm = ChatOllama(model="llama3", temperature=0.1)
 embeddings = OllamaEmbeddings(model="nomic-embed-text")
 
-# 🔍 Qdrant vector store
-client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
-qdrant = QdrantVectorStore(client=client, collection_name="knowledge_navigator", embedding=embeddings)
+# 🔍 Vector store Qdrant
+qdrant = QdrantVectorStore(
+    client=QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY),
+    collection_name="knowledge_navigator",
+    embedding=embeddings
+)
 retriever = qdrant.as_retriever()
 
-# 🧠 Memoria conversacional moderna
+# 🧠 Memoria conversacional
 memory = ConversationBufferMemory(
     memory_key="chat_history",
     return_messages=True,
-    output_key="answer"
+    output_key="output"  # ← obligatorio para evitar KeyError
 )
 
 # 🔗 Cadena RAG
@@ -51,10 +57,20 @@ qa_chain = ConversationalRetrievalChain.from_llm(
     retriever=retriever,
     memory=memory,
     return_source_documents=True,
-    output_key="answer"
+    output_key="output"  # ← clave que devolverá el resultado
 )
 
-# 💾 Guardado
+# 🧹 Utilidad para extraer JSON válido desde texto
+def extraer_json_de_texto(salida_cruda):
+    if isinstance(salida_cruda, dict):
+        return salida_cruda
+    match = re.search(r"\{[\s\S]*?\}", str(salida_cruda))
+    if not match:
+        raise ValueError("❌ No se encontró JSON válido en la salida.")
+    bloque = re.sub(r'(?<!")\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?=\s*:)', r'"\1"', match.group())
+    return json.loads(bloque)
+
+# 💾 Guardar trazabilidad
 def guardar(pregunta, pregunta_refinada, respuesta, adicionales, razonamiento_cot_texto, fuentes):
     entrada = {
         "pregunta": pregunta,
@@ -84,52 +100,24 @@ def guardar(pregunta, pregunta_refinada, respuesta, adicionales, razonamiento_co
 
     mongo_collection.insert_one(entrada)
 
-# 🔍 Utilidad para extraer JSON de una salida que incluye texto adicional
-# 🔍 Utilidad robusta para extraer y reparar JSON generado por el LLM
-def extraer_json_de_texto(salida_cruda):
-    import re
-    import json
-
-    if isinstance(salida_cruda, dict):
-        return salida_cruda  # Ya es un dict válido
-
-    # Buscar bloque de JSON con llaves (incluye saltos de línea y texto extra)
-    match = re.search(r"\{[\s\S]*?\}", str(salida_cruda))
-    if not match:
-        raise ValueError("❌ No se encontró ningún bloque con formato JSON en la salida del razonador_chain.")
-
-    bloque = match.group()
-
-    # Reparar claves sin comillas dobles (clave: → "clave":)
-    bloque = re.sub(r'(?<!")\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?=\s*:)', r'"\1"', bloque)
-
-    try:
-        return json.loads(bloque)
-    except json.JSONDecodeError as e:
-        print("\n❌ Error al parsear JSON reparado:")
-        print(bloque)
-        raise e
-
-
-
 # 🤖 Función principal
 def responder(pregunta):
     try:
-        # Paso 1: razonador estructurado moderno (puede incluir texto fuera del JSON)
+        # Paso 1: razonamiento estructurado (puede venir con texto extra)
         salida_cruda = razonador_chain.invoke({"pregunta_usuario": pregunta})
         razonamiento = extraer_json_de_texto(salida_cruda)
         pregunta_refinada = razonamiento.get("pregunta_refinada", pregunta)
         adicionales = razonamiento.get("respuestas_adicionales", [])
 
-        # Paso 2: razonador CoT para trazabilidad
+        # Paso 2: razonamiento tipo Chain of Thought
         razonamiento_cot_texto = razonamiento_cot(pregunta)
 
-        # Paso 3: ejecutar RAG
+        # Paso 3: ejecución de la cadena RAG
         resultado = qa_chain.invoke({"question": pregunta_refinada})
-        respuesta = resultado["answer"]
+        respuesta = resultado["output"]
         fuentes = resultado.get("source_documents", [])
 
-        # Mostrar en terminal
+        # ✅ Mostrar resultados
         print("\n📘 Respuesta:")
         print(respuesta)
 
@@ -141,22 +129,20 @@ def responder(pregunta):
         if fuentes:
             print("\n📚 Documentos fuente:")
             for i, doc in enumerate(fuentes):
-                nombre = doc.metadata.get("source", "desconocido")
-                pagina = doc.metadata.get("page", "N/A")
-                print(f"  {i+1}. {nombre} (p. {pagina})")
+                print(f"  {i+1}. {doc.metadata.get('source', 'desconocido')} (p. {doc.metadata.get('page', 'N/A')})")
 
-        # Guardar todo
+        # 🧾 Guardar
         guardar(pregunta, pregunta_refinada, respuesta, adicionales, razonamiento_cot_texto, fuentes)
 
     except Exception as e:
         print("\n⚠️ Error durante el procesamiento de la consulta:")
         print(e)
 
-# 🏁 Interfaz por consola
+# 🏁 Interfaz
 if __name__ == "__main__":
     print("🧪 Knowledge Navigator – Consulta híbrida con razonamiento (Chain + CoT), memoria y MongoDB\n")
     while True:
         pregunta = input("🔎 Introduce tu pregunta (o 'salir'): ")
-        if pregunta.lower().strip() == "salir":
+        if pregunta.strip().lower() == "salir":
             break
         responder(pregunta)
