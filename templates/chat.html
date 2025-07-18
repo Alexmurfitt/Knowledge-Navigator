@@ -25,20 +25,15 @@
 
   <main class="chat-wrapper">
     <div class="chat-header">
-      <div class="chat-header-title">
-        <span class="chat-icon">🤖</span> Document Assistant
-      </div>
-
+      <div class="chat-header-title"><span class="chat-icon">🤖</span> Document Assistant</div>
     </div>
-
     <div id="chatBox" class="chat-messages">
       <div class="message bot">
-        <p>Hola! soy el asistente de documentos de tu empresa. Sube tu PDF en la sección de documentos y te ayudaré a
-          encontrar lo que buscas en tus documentos, qué te gustaría saber?</p>
+        <p>Hola! soy el asistente de documentos de tu empresa. Sube tu PDF y te ayudaré a encontrar lo que buscas.</p>
         <span class="timestamp">11:21:08 PM</span>
       </div>
     </div>
-
+    <button onclick="clearChat()">🧹 Limpiar Chat</button>
     <div class="chat-input">
       <input type="text" id="question" placeholder="Ask a question about your documents..." />
       <button onclick="askBot()">➤</button>
@@ -121,7 +116,49 @@
       msgDiv.appendChild(timestamp);
       chatBox.appendChild(msgDiv);
       chatBox.scrollTop = chatBox.scrollHeight;
+
+      // Guardar en localStorage
+      saveChatHistory(sender, message, timestamp.textContent);
     }
+
+    function saveChatHistory(sender, message, timestamp) {
+      const history = JSON.parse(localStorage.getItem("chatHistory")) || [];
+      history.push({ sender, message, timestamp });
+      localStorage.setItem("chatHistory", JSON.stringify(history));
+    }
+
+
+    function loadChatHistory() {
+      const history = JSON.parse(localStorage.getItem("chatHistory")) || [];
+      const chatBox = document.getElementById("chatBox");
+      chatBox.innerHTML = "";  // Limpiar antes
+
+      for (let msg of history) {
+        const msgDiv = document.createElement("div");
+        msgDiv.classList.add("message", msg.sender === "Tú" ? "user" : "bot");
+
+        const msgContent = document.createElement("p");
+        msgContent.textContent = msg.message;
+
+        const timestamp = document.createElement("span");
+        timestamp.classList.add("timestamp");
+        timestamp.textContent = msg.timestamp;
+
+        msgDiv.appendChild(msgContent);
+        msgDiv.appendChild(timestamp);
+        chatBox.appendChild(msgDiv);
+      }
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    window.addEventListener("DOMContentLoaded", loadChatHistory);
+
+    function clearChat() {
+      document.getElementById("chatBox").innerHTML = "";
+      localStorage.removeItem("chatHistory");
+    }
+
+
   </script>
 </body>
 

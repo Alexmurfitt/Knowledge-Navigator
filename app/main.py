@@ -202,3 +202,39 @@ async def ask_bot(req: ChatRequest):
 
     result = chain.invoke({"query": req.question})
     return {"answer": result["result"]}
+
+
+@app.get("/documentos_unicos/{collection_name}")
+async def mostrar_documentos_unicos(collection_name: str):
+    try:
+        client = QdrantClient(
+            url=url, 
+            api_key=api_key
+        )
+
+        scrolled_points, llamada= client.scroll( # La "llamada" es porque client.scroll devuelve (puntos, llamada) y la llamada es para la siguiente llamda (no se necesita para nada), es decir me devuelve una tupla de 2 valores, Puntos y llamada
+            collection_name=collection_name,
+            limit=10000,    # El limit es la cantidad de endpoint que quiero ver
+            with_payload=True   #Awui esta incluyendo los metadatos
+        )
+
+        print(f"Lo que devuelve scrolled_points = {scrolled_points[0]}")
+        print(50*"-")
+        print(f"Lo que devuelve scrolled_points = {scrolled_points[1]}")
+        print(f"En este caso, quiero saber la página donde extrajo la información, que es: {scrolled_points[0].payload['metadata']['total_pages']} ")
+        print(f"Lo que devuelve _ : {llamada}")
+
+        document_names = set()  #En vez de un diccionario o una lista pongo un set ya que almacena documentos unicos
+        for point in scrolled_points:
+            if point.payload and "metadata" in point.payload:   #Si hay payload y metadata esta dentro de payload (Lo de metadata es dentro de los metadatos hay un campo llamado metadata y dentro estan el resto de variables)
+                # 2. Buscamos 'document_name_id' DENTRO de 'metadata'
+                metadata_dict = point.payload["metadata"]
+                if "document_name_id" in metadata_dict: #Si dentro de metadata esta document_name_id
+                    document_names.add(metadata_dict["document_name_id"])   #Lo añadimos al set
+
+        return sorted(list(document_names))
+
+
+    except Exception as e:
+        print(f"Ha ocurrido un error: {e}")
+        return []

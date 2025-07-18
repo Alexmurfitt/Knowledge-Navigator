@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
-<body>
+
 
   <body>
     <header class="navbar">
@@ -206,7 +206,35 @@
       });
     }
 
+async function cargarDocumentosDesdeBackend() {
+  try {
+    const res = await fetch("http://localhost:5500/documentos_unicos/Knowledge-Navigator");
+    if (!res.ok) throw new Error("No se pudo obtener la lista de documentos");
 
+    const documentos = await res.json();
+    console.log("📄 Documentos cargados:", documentos);
+
+    if (documentos.length === 0) {
+      toggleNoDocsMessage();
+      return;
+    }
+
+    documentos.forEach((filename) => {
+      createDocCard(filename, "success");
+    });
+
+    toggleNoDocsMessage();
+  } catch (err) {
+    console.error("❌ Error al cargar documentos:", err);
+    alert("❌ No se pudieron cargar los documentos desde el sistema.");
+  }
+}
+
+
+// Cargar documentos automáticamente al iniciar la página
+window.addEventListener("DOMContentLoaded", () => {
+  cargarDocumentosDesdeBackend();
+});
 
   </script>
 </body>
