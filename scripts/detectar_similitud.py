@@ -23,7 +23,7 @@ def detectar_redundancia(nueva_pregunta):
     if not preguntas_previas:
         return None
 
-    embeddings = OllamaEmbeddings(model="mxbai-embed-large:latest")
+    embeddings = OllamaEmbeddings(model="nomic-embed-text:latest")
     vectores_previos = embeddings.embed_documents(preguntas_previas)
     vector_nuevo = embeddings.embed_query(nueva_pregunta)
 
