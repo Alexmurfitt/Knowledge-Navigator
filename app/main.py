@@ -74,14 +74,28 @@ def split_chunks(docs):
 from fastapi.responses import JSONResponse
 from fastapi import HTTPException
 
+
+
+url=os.getenv("QDRANT-URL")
+api_key=os.getenv("QDRANT-API-KEY")
+collection_name="Knowledge-Navigator"
+
+
 @app.post("/upload")
 async def upload_pdfs(files: List[UploadFile] = File(...)):
     try:
         print("📥 Archivos recibidos:", [f.filename for f in files])
         all_docs = []
         for f in files:
-            all_docs.extend(extract_text_from_pdf(f))
+            if not f.filename.lower().endswith('.pdf'):
+                raise HTTPException(status_code=400, detail=f"El archivo {f.filename} no es un PDF válido.")
+            docs = extract_text_from_pdf(f)
+            for doc in docs:
+                doc.metadata["document_name_id"] = f.filename
+            all_docs.extend(docs)
 
+
+        crear_indice(collection_name=collection_name)
         chunks = split_chunks(all_docs)
         print(f"📄 Total de fragmentos: {len(chunks)}")
 
@@ -90,9 +104,9 @@ async def upload_pdfs(files: List[UploadFile] = File(...)):
         vector_store = QdrantVectorStore.from_documents(
             documents=chunks,
             embedding=embeddings,
-            url=os.getenv("QDRANT-URL"),
-            api_key=os.getenv("QDRANT-API-KEY"),
-            collection_name="Knowledge-Navigator",
+            url=url,
+            api_key=api_key,
+            collection_name=collection_name,
             force_recreate=False
         )
 
@@ -104,6 +118,70 @@ async def upload_pdfs(files: List[UploadFile] = File(...)):
     except Exception as e:
         print("❌ Error en /upload:", e)
         raise HTTPException(status_code=500, detail="Error al procesar los archivos.")
+
+def crear_indice(collection_name : str):
+    try:
+        client = QdrantClient(
+            url=url, 
+            api_key=api_key
+        )
+        print("Creando índice para la ruta anidada 'metadata.document_name_id'...")
+        
+        # Crea el índice en la colección apuntando a la ruta anidada correcta
+        client.create_payload_index(
+            collection_name=collection_name,
+            field_name="metadata.document_name_id",  # <-- LA CLAVE ESTÁ AQUÍ
+            field_schema=models.PayloadSchemaType.KEYWORD
+        )
+        print(" ¡Índice para 'metadata.document_name_id' creado con éxito!")
+
+    except Exception as e:
+        print(f" No se pudo crear el indice (puede que exista): {e}")
+
+
+
+
+
+from qdrant_client import QdrantClient, models
+
+@app.delete("/delete")
+async def eliminar_pdf_qdrant(collection_name: str, pdf_nombre: str):
+    print(f"📥 DELETE recibido para: {pdf_nombre} en colección: {collection_name}")
+
+    # Conexión con el cliente de Qdrant
+    client = QdrantClient(
+        url=url, 
+        api_key=api_key
+    )
+
+    filter = models.Filter(
+        must=[
+            models.FieldCondition(
+                key="metadata.document_name_id", # El campo de metadatos que creamos
+                match=models.MatchValue(value=pdf_nombre),
+            )
+        ]
+    )
+
+    print(filter)
+
+    try:
+        # Usamos  delete para borrar los puntos que cumplen con el filtro
+        respuesta = client.delete(
+            collection_name=collection_name,
+            points_selector=models.FilterSelector(filter=filter),
+            wait= True
+        )
+        print(f"SE ha borrado el pdf con nombre: '{pdf_nombre}'.")
+        print(f"Respuesta de Qdrant: {respuesta}")
+        return JSONResponse(content={"success": True})
+    
+    except Exception as e:
+        print(f"Error al eliminar los datos de Qdrant: {e}")
+        return JSONResponse(content={"success": False}, status_code=500)
+    
+
+
 
 # --- Endpoint: preguntar al bot ---
 class ChatRequest(BaseModel):

@@ -10,64 +10,43 @@
 </head>
 
 <body>
+
   <body>
-  <header class="navbar">
-    <div class="logo"><strong>Knowledge</strong> <span class="sub">Navigator</span></div>
-    <nav>
-      <a class="home-btn" href="landing.html">Home</a>
-      <a class="chat-btn" href="chat.html">Chat</a>
-      <a class="docs-btn" href="documents.html">Documents</a>
-      <a href="#">Sign In</a>
-      <a href="#" class="btn-primary">Get Started</a>
-    </nav>
-  </header>
+    <header class="navbar">
+      <div class="logo"><strong>Knowledge</strong> <span class="sub">Navigator</span></div>
+      <nav>
+        <a class="home-btn" href="landing.html">Home</a>
+        <a class="chat-btn" href="chat.html">Chat</a>
+        <a class="docs-btn" href="documents.html">Documents</a>
+        <a href="#">Sign In</a>
+        <a href="#" class="btn-primary">Get Started</a>
+      </nav>
+    </header>
 
-  <main class="library-container">
-    <div class="library-header">
-      <div>
-        <h1>Document Library</h1>
-        <p>Manage and organize your enterprise documents</p>
-      </div>
-      <div class="controls">
-        <input type="text" class="search-input" placeholder="Search documents..." />
-        <select class="filter-dropdown">
-          <option>All Documents</option>
-          <option>HR</option>
-          <option>Finance</option>
-          <option>Marketing</option>
-          <option>IT</option>
-          <option>Legal</option>
-        </select>
-        <button class="upload-btn">Upload Document</button>
-      </div>
-    </div>
+    <main class="library-container">
+      <div class="library-header">
+        <div>
+          <h1>Document Library</h1>
+          <p>Manage and organize your enterprise documents</p>
+        </div>
+        <div class="controls">
+          <input type="text" class="search-input" placeholder="Search documents..." />
+          <input type="file" id="pdfFiles" multiple accept="application/pdf" />
+          <button onclick="uploadPDFs()" class="upload-btn">Upload Documents</button>
 
-    <div class="document-grid">
-      <!-- Document card example -->
-      <div class="doc-card">
-        <div class="doc-header">
-          <div class="doc-icon">📄</div>
-          <div class="doc-info">
-            <h3>Employee Handbook 2024.pdf</h3>
-            <span class="badge ready">Ready</span>
-          </div>
-        </div>
-        <p class="doc-meta">2.4 MB · Uploaded 1/15/2024</p>
-        <div class="tags">
-          <span class="tag">HR</span>
-          <span class="tag">Policies</span>
-        </div>
-        <div class="actions">
-          <button title="View">👁️</button>
-          <button title="Download">⬇️</button>
-          <button title="Delete">🗑️</button>
         </div>
       </div>
 
-      <!-- Puedes duplicar el bloque anterior para más documentos -->
-    </div>
-  </main>
-</body>
+
+      <p id="no-docs-message" style="text-align: center; color: #666;">
+        No tienes ningún PDF subido aún.
+      </p>
+
+      <div class="document-grid">
+        <!-- Document card example -->
+      </div>
+    </main>
+  </body>
 
 
 
@@ -75,8 +54,21 @@
   <script>
     async function uploadPDFs() {
       const files = document.getElementById("pdfFiles").files;
+      const documentGrid = document.querySelector(".document-grid");
+
+      // Limpiar el grid si quieres empezar desde cero:
+      // documentGrid.innerHTML = "";
+
       const formData = new FormData();
-      for (let file of files) formData.append("files", file);
+      const fileCards = [];
+
+      // Crear una card por archivo y agregar al FormData
+      for (let file of files) {
+        formData.append("files", file);
+        const card = createDocCard(file.name, "processing");
+        toggleNoDocsMessage(); // Ocultar mensaje si hay archivos
+        fileCards.push({ file, card });
+      }
 
       try {
         const res = await fetch("http://localhost:5500/upload", {
@@ -85,31 +77,138 @@
         });
 
         const contentType = res.headers.get("content-type");
+
         if (!res.ok) {
+          fileCards.forEach(({ card }) => updateCardStatus(card, "error"));
           const text = await res.text();
           throw new Error(`Error del servidor (${res.status}): ${text}`);
         }
 
-        if (contentType && contentType.includes("application/json")) {
-          const data = await res.json();
-          alert(data.message);
-        } else {
-          const text = await res.text();
-          alert("Respuesta no es JSON: " + text);
-        }
+        const data = contentType.includes("application/json")
+          ? await res.json()
+          : { message: "Respuesta no válida" };
+
+        fileCards.forEach(({ card }) => updateCardStatus(card, "success"));
+        alert(data.message);
 
       } catch (err) {
-        console.error("Error al subir archivos:", err);
+        console.error("❌ Error al subir archivos:", err);
+        fileCards.forEach(({ card }) => updateCardStatus(card, "error"));
         alert("Error al subir archivos.");
       }
     }
+
+
+    function createDocCard(filename, status = "processing") {
+      const badgeClassMap = {
+        processing: "processing",
+        success: "ready",
+        error: "error"
+      };
+
+      const badgeTextMap = {
+        processing: "En proceso...",
+        success: "Subido",
+        error: "Error"
+      };
+
+      const now = new Date();
+      const formattedDate = formatDateTime(now);
+
+      const card = document.createElement("div");
+      card.className = "doc-card";
+
+      card.innerHTML = `
+    <div class="doc-header">
+      <div class="doc-icon">📄</div>
+      <div class="doc-info">
+        <h3>${filename}</h3>
+        <span class="badge ${badgeClassMap[status]}">${badgeTextMap[status]}</span>
+      </div>
+    </div>
+    <p class="doc-meta">Subido el ${formattedDate}</p>
+    <div class="tags">
+      <span class="tag">PDF</span>
+    </div>
+    <div class="actions">
+      <button title="View" disabled>👁️</button>
+      <button title="Download" disabled>⬇️</button>
+      <button title="Delete">🗑️</button>
+    </div>
+  `;
+
+      const deleteBtn = card.querySelector('button[title="Delete"]');
+      deleteBtn.addEventListener("click", async () => {
+        const confirmDelete = confirm(`¿Estás seguro de eliminar "${filename}"?`);
+        if (!confirmDelete) return;
+
+        try {
+          const res = await fetch(`http://localhost:5500/delete?collection_name=Knowledge-Navigator&pdf_nombre=${encodeURIComponent(filename)}`, {
+            method: "DELETE"
+          });
+
+          if (!res.ok) throw new Error("Error al eliminar el documento en el servidor");
+
+          const result = await res.json();
+          console.log("🔁 Respuesta del backend:", result);
+          if (result.success === true) {
+            card.remove();
+            toggleNoDocsMessage();
+          } else {
+            alert("⚠️ No se pudo eliminar el documento del sistema.");
+          }
+        } catch (err) {
+          console.error("❌ Error al eliminar:", err);
+          alert("❌ Error al eliminar el documento.");
+        }
+      });
+
+
+      document.querySelector(".document-grid").appendChild(card);
+      return card;
+    }
+
+    function toggleNoDocsMessage() {
+      const grid = document.querySelector(".document-grid");
+      const message = document.getElementById("no-docs-message");
+
+      if (grid.children.length === 0) {
+        message.style.display = "block";
+      } else {
+        message.style.display = "none";
+      }
+    }
+
+
+    function updateCardStatus(card, status) {
+      const badge = card.querySelector(".badge");
+      if (!badge) return;
+
+      const textMap = {
+        processing: "En proceso...",
+        success: "Subido",
+        error: "Error"
+      };
+      const classMap = {
+        processing: "processing",
+        success: "ready",
+        error: "error"
+      };
+
+      badge.textContent = textMap[status];
+      badge.className = `badge ${classMap[status]}`;
+    }
+
+    function formatDateTime(date) {
+      return date.toLocaleString("es-ES", {
+        dateStyle: "short",
+        timeStyle: "short"
+      });
+    }
+
+
 
   </script>
 </body>
 
 </html>
-  <section class="uploader">
-    <h2>Upload your PDFs</h2>
-    <input type="file" id="pdfFiles" multiple />
-    <button onclick="uploadPDFs()">Upload</button>
-  </section>
