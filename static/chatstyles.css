@@ -47,6 +47,14 @@ nav a {
   margin-right: 50px;
 }
 
+.home-btn:hover {
+    margin-right: 40px;
+  padding: 10px;
+  background-color: #d8e8ff;
+  border-radius: 6px;
+  color: #3b82f6;
+}
+
 .chat-btn {
   margin-right: 40px;
   padding: 10px;
@@ -57,6 +65,15 @@ nav a {
 
 .docs-btn {
   margin-right: 240px;
+}
+
+.docs-btn:hover {
+margin-right: 230px;
+margin-left: 10px;
+  padding: 10px;
+  background-color: #d8e8ff;
+  border-radius: 6px;
+  color: #3b82f6;
 }
 
 .header-center {
