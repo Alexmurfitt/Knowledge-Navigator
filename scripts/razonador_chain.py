@@ -4,25 +4,29 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableSequence
 
-# Modelo LLM
-llm = ChatOllama(model="llama3", temperature=0.1)
+# Parser con instrucciones de formato JSON
+parser = JsonOutputParser()
 
-# Prompt estructurado
-prompt = PromptTemplate.from_template("""
-Actúa como un asistente experto que mejora preguntas del usuario en temas de ética de la IA.
+# Prompt actualizado
+prompt = PromptTemplate.from_template(f"""
+Actúa como un asistente especializado en análisis de documentación empresarial y mejora de consultas de usuario.
 
-1. Refina la pregunta para que sea más clara y precisa.
-2. Añade entre 1 y 3 frases complementarias que amplíen la perspectiva, sin repetir la pregunta ni formular nuevas.
+Tu tarea es:
+
+1. Reformular la pregunta del usuario para que sea más clara, precisa y adecuada al análisis de documentación.
+2. Añadir entre 1 y 3 frases complementarias que amplíen la perspectiva o enfoquen mejor la búsqueda, sin repetir ni reformular la pregunta.
 
 Devuelve la respuesta en formato JSON con las claves:
 - "pregunta_refinada": string
 - "respuestas_adicionales": lista de frases
 
-Usuario: {pregunta_usuario}
+{parser.get_format_instructions()}
+
+Usuario: {{pregunta_usuario}}
 """)
 
-# Parser JSON (genérico)
-parser = JsonOutputParser()
+# Modelo LLM
+llm = ChatOllama(model="llama3", temperature=0.1)
 
-# Cadena completa
+# Cadena ensamblada
 razonador_chain = prompt | llm | parser

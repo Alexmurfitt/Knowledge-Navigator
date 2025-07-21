@@ -10,7 +10,7 @@ from langchain.memory import ConversationBufferMemory
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 
-# Nuevo import para evitar deprecación en historial (requiere `pip install langchain-mongodb`)
+# Nuevo import para evitar deprecación en historial
 from langchain_mongodb.chat_message_histories import MongoDBChatMessageHistory
 
 # ✅ Razonadores personalizados
@@ -57,10 +57,10 @@ qa_chain = ConversationalRetrievalChain.from_llm(
     retriever=retriever,
     memory=memory,
     return_source_documents=True,
-    output_key="output"  # ← clave que devolverá el resultado
+    output_key="output"
 )
 
-# 🧹 Utilidad para extraer JSON válido desde texto
+# 🧹 Extraer JSON válido desde salida textual
 def extraer_json_de_texto(salida_cruda):
     if isinstance(salida_cruda, dict):
         return salida_cruda
@@ -89,6 +89,12 @@ def guardar(pregunta, pregunta_refinada, respuesta, adicionales, razonamiento_co
         ]
     }
 
+    # ✅ Crear historial.json si no existe
+    if not os.path.exists("historial.json"):
+        with open("historial.json", "w", encoding="utf-8") as f:
+            json.dump([], f)
+
+    # 🔁 Guardar en archivo local
     with open("historial.json", "r+", encoding="utf-8") as f:
         try:
             historial = json.load(f)
@@ -98,27 +104,29 @@ def guardar(pregunta, pregunta_refinada, respuesta, adicionales, razonamiento_co
         f.seek(0)
         json.dump(historial, f, ensure_ascii=False, indent=2)
 
+    # 🔁 Guardar en MongoDB
     mongo_collection.insert_one(entrada)
 
 # 🤖 Función principal
 def responder(pregunta):
     try:
-        # Paso 1: razonamiento estructurado (puede venir con texto extra)
+        # Paso 1: razonamiento estructurado (mejora de pregunta y expansión semántica)
         salida_cruda = razonador_chain.invoke({"pregunta_usuario": pregunta})
         razonamiento = extraer_json_de_texto(salida_cruda)
-        pregunta_refinada = razonamiento.get("pregunta_refinada", pregunta)
+
+        pregunta_refinada = razonamiento.get("pregunta_refinada", pregunta).strip()
         adicionales = razonamiento.get("respuestas_adicionales", [])
 
         # Paso 2: razonamiento tipo Chain of Thought
         razonamiento_cot_texto = razonamiento_cot(pregunta)
 
-        # Paso 3: ejecución de la cadena RAG
+        # Paso 3: ejecución de la cadena RAG con la pregunta refinada
         resultado = qa_chain.invoke({"question": pregunta_refinada})
         respuesta = resultado["output"]
         fuentes = resultado.get("source_documents", [])
 
-        # ✅ Mostrar resultados
-        print("\n📘 Respuesta:")
+        # ✅ Mostrar resultados por consola
+        print("\n📘 RESPUESTA:")
         print(respuesta)
 
         if adicionales:
@@ -127,18 +135,24 @@ def responder(pregunta):
                 print(f"• {r}")
 
         if fuentes:
-            print("\n📚 Documentos fuente:")
+            print("\n📚 DOCUMENTOS CONSULTADOS:")
             for i, doc in enumerate(fuentes):
                 print(f"  {i+1}. {doc.metadata.get('source', 'desconocido')} (p. {doc.metadata.get('page', 'N/A')})")
 
-        # 🧾 Guardar
+        # 🧾 Guardado automático del historial
         guardar(pregunta, pregunta_refinada, respuesta, adicionales, razonamiento_cot_texto, fuentes)
+
+        # ✅ Devolver todos los valores esperados por la interfaz
+        return respuesta, adicionales, fuentes
 
     except Exception as e:
         print("\n⚠️ Error durante el procesamiento de la consulta:")
         print(e)
+        return f"❌ Error: {str(e)}", [], []
 
-# 🏁 Interfaz
+
+
+# 🏁 Modo consola
 if __name__ == "__main__":
     print("🧪 Knowledge Navigator – Consulta híbrida con razonamiento (Chain + CoT), memoria y MongoDB\n")
     while True:
