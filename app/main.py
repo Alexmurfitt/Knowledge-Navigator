@@ -28,7 +28,7 @@ app = FastAPI()
 # CORS: Permitir conexiones desde tu HTML
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:5501"],
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"]
 )
