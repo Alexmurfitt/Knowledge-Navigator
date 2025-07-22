@@ -196,7 +196,8 @@ body {
 
 .actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
+  gap:100px;
   border-top: 1px solid #e5e7eb;
   padding-top: 12px;
 }
@@ -221,4 +222,14 @@ body {
 .badge.error {
   background-color: red;
   color: white;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover i {
+  color: red;
 }

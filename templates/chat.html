@@ -26,14 +26,15 @@
   <main class="chat-wrapper">
     <div class="chat-header">
       <div class="chat-header-title"><span class="chat-icon">🤖</span> Document Assistant</div>
-    </div>
+    <button class="cleanChat"onclick="clearChat()">Limpiar Chat</button>
+  </div>
     <div id="chatBox" class="chat-messages">
       <div class="message bot">
         <p>Hola! soy el asistente de documentos de tu empresa. Sube tu PDF y te ayudaré a encontrar lo que buscas.</p>
         <span class="timestamp">11:21:08 PM</span>
       </div>
     </div>
-    <button onclick="clearChat()">🧹 Limpiar Chat</button>
+    
     <div class="chat-input">
       <input type="text" id="question" placeholder="Ask a question about your documents..." />
       <button onclick="askBot()">➤</button>
@@ -48,7 +49,7 @@
       for (let file of files) formData.append("files", file);
 
       try {
-        const res = await fetch("http://localhost:5500/upload", {
+        const res = await fetch("http://localhost:5000/upload", {
           method: "POST",
           body: formData
         });
@@ -85,7 +86,7 @@
       document.getElementById("question").value = "";
 
       try {
-        const res = await fetch("http://localhost:5500/ask", {
+        const res = await fetch("http://localhost:5000/ask", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ question })
@@ -133,30 +134,49 @@
       const chatBox = document.getElementById("chatBox");
       chatBox.innerHTML = "";  // Limpiar antes
 
-      for (let msg of history) {
-        const msgDiv = document.createElement("div");
-        msgDiv.classList.add("message", msg.sender === "Tú" ? "user" : "bot");
+      if (history.length === 0) {
+        const documentosSubidos = localStorage.getItem("documentosSubidos") === "true";
+        const mensaje = documentosSubidos
+          ? "¡Estoy listo para ayudarte con los documentos que subiste!"
+          : "Hola! Sube tu PDF y te ayudaré a encontrar lo que buscas.";
+        appendMessage("Bot", mensaje);
+      } else {
+        for (let msg of history) {
+          const msgDiv = document.createElement("div");
+          msgDiv.classList.add("message", msg.sender === "Tú" ? "user" : "bot");
 
-        const msgContent = document.createElement("p");
-        msgContent.textContent = msg.message;
+          const msgContent = document.createElement("p");
+          msgContent.textContent = msg.message;
 
-        const timestamp = document.createElement("span");
-        timestamp.classList.add("timestamp");
-        timestamp.textContent = msg.timestamp;
+          const timestamp = document.createElement("span");
+          timestamp.classList.add("timestamp");
+          timestamp.textContent = msg.timestamp;
 
-        msgDiv.appendChild(msgContent);
-        msgDiv.appendChild(timestamp);
-        chatBox.appendChild(msgDiv);
+          msgDiv.appendChild(msgContent);
+          msgDiv.appendChild(timestamp);
+          chatBox.appendChild(msgDiv);
+        }
+        chatBox.scrollTop = chatBox.scrollHeight;
       }
-      chatBox.scrollTop = chatBox.scrollHeight;
     }
+
 
     window.addEventListener("DOMContentLoaded", loadChatHistory);
 
     function clearChat() {
-      document.getElementById("chatBox").innerHTML = "";
+      const chatBox = document.getElementById("chatBox");
+      chatBox.innerHTML = "";
       localStorage.removeItem("chatHistory");
+
+      // Mostrar nuevamente el mensaje inicial del bot
+      const documentosSubidos = localStorage.getItem("documentosSubidos") === "true";
+      const mensaje = documentosSubidos
+        ? "¡Estoy listo para ayudarte con los documentos que subiste!"
+        : "Hola! Sube tu PDF y te ayudaré a encontrar lo que buscas.";
+
+      appendMessage("Bot", mensaje);
     }
+
 
 
   </script>

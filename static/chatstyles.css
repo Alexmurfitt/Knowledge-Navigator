@@ -195,3 +195,14 @@ nav a {
   background-color: #c0bdfd;
   width: 190px;
 }
+
+.cleanChat {
+  background-color: #f87171;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-left: 0 auto;
+}

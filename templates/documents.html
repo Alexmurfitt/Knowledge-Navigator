@@ -6,119 +6,121 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Knowledge Navigator</title>
   <link rel="stylesheet" href="../static/documentsstyles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
 
 
-  <body>
-    <header class="navbar">
-      <div class="logo"><strong>Knowledge</strong> <span class="sub">Navigator</span></div>
-      <nav>
-        <a class="home-btn" href="landing.html">Home</a>
-        <a class="chat-btn" href="chat.html">Chat</a>
-        <a class="docs-btn" href="documents.html">Documents</a>
-        <a href="#">Sign In</a>
-        <a href="#" class="btn-primary">Get Started</a>
-      </nav>
-    </header>
+<body>
+  <header class="navbar">
+    <div class="logo"><strong>Knowledge</strong> <span class="sub">Navigator</span></div>
+    <nav>
+      <a class="home-btn" href="landing.html">Home</a>
+      <a class="chat-btn" href="chat.html">Chat</a>
+      <a class="docs-btn" href="documents.html">Documents</a>
+      <a href="#">Sign In</a>
+      <a href="#" class="btn-primary">Get Started</a>
+    </nav>
+  </header>
 
-    <main class="library-container">
-      <div class="library-header">
-        <div>
-          <h1>Document Library</h1>
-          <p>Manage and organize your enterprise documents</p>
-        </div>
-        <div class="controls">
-          <input type="text" class="search-input" placeholder="Search documents..." />
-          <input type="file" id="pdfFiles" multiple accept="application/pdf" />
-          <button onclick="uploadPDFs()" class="upload-btn">Upload Documents</button>
-
-        </div>
+  <main class="library-container">
+    <div class="library-header">
+      <div>
+        <h1>Document Library</h1>
+        <p>Manage and organize your enterprise documents</p>
       </div>
+      <div class="controls">
+        <input type="text" class="search-input" placeholder="Search documents..." />
+        <input type="file" id="pdfFiles" multiple accept="application/pdf" />
+        <button onclick="uploadPDFs()" class="upload-btn">Upload Documents</button>
 
-
-      <p id="no-docs-message" style="text-align: center; color: #666;">
-        No tienes ningún PDF subido aún.
-      </p>
-
-      <div class="document-grid">
-        <!-- Document card example -->
       </div>
-    </main>
-  </body>
+    </div>
+
+
+    <p id="no-docs-message" style="text-align: center; color: #666;">
+      No tienes ningún PDF subido aún.
+    </p>
+
+    <div class="document-grid">
+      <!-- Document card example -->
+    </div>
+  </main>
+</body>
 
 
 
 
-  <script>
-    async function uploadPDFs() {
-      const files = document.getElementById("pdfFiles").files;
-      const documentGrid = document.querySelector(".document-grid");
+<script>
+  async function uploadPDFs() {
+    const files = document.getElementById("pdfFiles").files;
+    const documentGrid = document.querySelector(".document-grid");
 
-      // Limpiar el grid si quieres empezar desde cero:
-      // documentGrid.innerHTML = "";
+    // Limpiar el grid si quieres empezar desde cero:
+    // documentGrid.innerHTML = "";
 
-      const formData = new FormData();
-      const fileCards = [];
+    const formData = new FormData();
+    const fileCards = [];
 
-      // Crear una card por archivo y agregar al FormData
-      for (let file of files) {
-        formData.append("files", file);
-        const card = createDocCard(file.name, "processing");
-        toggleNoDocsMessage(); // Ocultar mensaje si hay archivos
-        fileCards.push({ file, card });
-      }
-
-      try {
-        const res = await fetch("http://localhost:5500/upload", {
-          method: "POST",
-          body: formData
-        });
-
-        const contentType = res.headers.get("content-type");
-
-        if (!res.ok) {
-          fileCards.forEach(({ card }) => updateCardStatus(card, "error"));
-          const text = await res.text();
-          throw new Error(`Error del servidor (${res.status}): ${text}`);
-        }
-
-        const data = contentType.includes("application/json")
-          ? await res.json()
-          : { message: "Respuesta no válida" };
-
-        fileCards.forEach(({ card }) => updateCardStatus(card, "success"));
-        alert(data.message);
-
-      } catch (err) {
-        console.error("❌ Error al subir archivos:", err);
-        fileCards.forEach(({ card }) => updateCardStatus(card, "error"));
-        alert("Error al subir archivos.");
-      }
+    // Crear una card por archivo y agregar al FormData
+    for (let file of files) {
+      formData.append("files", file);
+      const card = createDocCard(file.name, "processing");
+      toggleNoDocsMessage(); // Ocultar mensaje si hay archivos
+      fileCards.push({ file, card });
     }
 
+    try {
+      const res = await fetch("http://localhost:5000/upload", {
+        method: "POST",
+        body: formData
+      });
 
-    function createDocCard(filename, status = "processing") {
-      const badgeClassMap = {
-        processing: "processing",
-        success: "ready",
-        error: "error"
-      };
+      const contentType = res.headers.get("content-type");
 
-      const badgeTextMap = {
-        processing: "En proceso...",
-        success: "Subido",
-        error: "Error"
-      };
+      if (!res.ok) {
+        fileCards.forEach(({ card }) => updateCardStatus(card, "error"));
+        const text = await res.text();
+        throw new Error(`Error del servidor (${res.status}): ${text}`);
+      }
 
-      const now = new Date();
-      const formattedDate = formatDateTime(now);
+      const data = contentType.includes("application/json")
+        ? await res.json()
+        : { message: "Respuesta no válida" };
 
-      const card = document.createElement("div");
-      card.className = "doc-card";
+      fileCards.forEach(({ card }) => updateCardStatus(card, "success"));
+      alert(data.message);
 
-      card.innerHTML = `
+    } catch (err) {
+      console.error("❌ Error al subir archivos:", err);
+      fileCards.forEach(({ card }) => updateCardStatus(card, "error"));
+      alert("Error al subir archivos.");
+    }
+  }
+
+
+  function createDocCard(filename, status = "processing") {
+    const badgeClassMap = {
+      processing: "processing",
+      success: "ready",
+      error: "error"
+    };
+
+    const badgeTextMap = {
+      processing: "En proceso...",
+      success: "Subido",
+      error: "Error"
+    };
+
+    const now = new Date();
+    const formattedDate = formatDateTime(now);
+
+    const card = document.createElement("div");
+    card.className = "doc-card";
+
+    card.innerHTML = `
     <div class="doc-header">
       <div class="doc-icon">📄</div>
       <div class="doc-info">
@@ -132,111 +134,140 @@
     </div>
     <div class="actions">
       <button title="View" disabled>👁️</button>
-      <button title="Download" disabled>⬇️</button>
-      <button title="Delete">🗑️</button>
+      <button title="Delete"><i class="fas fa-trash-alt"></i>
+</button>
     </div>
   `;
 
-      const deleteBtn = card.querySelector('button[title="Delete"]');
-      deleteBtn.addEventListener("click", async () => {
-        const confirmDelete = confirm(`¿Estás seguro de eliminar "${filename}"?`);
-        if (!confirmDelete) return;
+    const deleteBtn = card.querySelector('button[title="Delete"]');
+    deleteBtn.addEventListener("click", async () => {
+      const confirmDelete = confirm(`¿Estás seguro de eliminar "${filename}"?`);
+      if (!confirmDelete) return;
 
-        try {
-          const res = await fetch(`http://localhost:5500/delete?collection_name=Knowledge-Navigator&pdf_nombre=${encodeURIComponent(filename)}`, {
-            method: "DELETE"
-          });
+      try {
+        const res = await fetch(`http://localhost:5000/delete?collection_name=Knowledge-Navigator&pdf_nombre=${encodeURIComponent(filename)}`, {
+          method: "DELETE"
+        });
 
-          if (!res.ok) throw new Error("Error al eliminar el documento en el servidor");
+        if (!res.ok) throw new Error("Error al eliminar el documento en el servidor");
 
-          const result = await res.json();
-          console.log("🔁 Respuesta del backend:", result);
-          if (result.success === true) {
-            card.remove();
-            toggleNoDocsMessage();
-          } else {
-            alert("⚠️ No se pudo eliminar el documento del sistema.");
-          }
-        } catch (err) {
-          console.error("❌ Error al eliminar:", err);
-          alert("❌ Error al eliminar el documento.");
+        const result = await res.json();
+        console.log("🔁 Respuesta del backend:", result);
+        if (result.success === true) {
+          card.remove();
+          toggleNoDocsMessage();
+        } else {
+          alert("⚠️ No se pudo eliminar el documento del sistema.");
         }
-      });
-
-
-      document.querySelector(".document-grid").appendChild(card);
-      return card;
-    }
-
-    function toggleNoDocsMessage() {
-      const grid = document.querySelector(".document-grid");
-      const message = document.getElementById("no-docs-message");
-
-      if (grid.children.length === 0) {
-        message.style.display = "block";
-      } else {
-        message.style.display = "none";
+      } catch (err) {
+        console.error("❌ Error al eliminar:", err);
+        alert("❌ Error al eliminar el documento.");
       }
-    }
-
-
-    function updateCardStatus(card, status) {
-      const badge = card.querySelector(".badge");
-      if (!badge) return;
-
-      const textMap = {
-        processing: "En proceso...",
-        success: "Subido",
-        error: "Error"
-      };
-      const classMap = {
-        processing: "processing",
-        success: "ready",
-        error: "error"
-      };
-
-      badge.textContent = textMap[status];
-      badge.className = `badge ${classMap[status]}`;
-    }
-
-    function formatDateTime(date) {
-      return date.toLocaleString("es-ES", {
-        dateStyle: "short",
-        timeStyle: "short"
-      });
-    }
-
-async function cargarDocumentosDesdeBackend() {
-  try {
-    const res = await fetch("http://localhost:5500/documentos_unicos/Knowledge-Navigator");
-    if (!res.ok) throw new Error("No se pudo obtener la lista de documentos");
-
-    const documentos = await res.json();
-    console.log("📄 Documentos cargados:", documentos);
-
-    if (documentos.length === 0) {
-      toggleNoDocsMessage();
-      return;
-    }
-
-    documentos.forEach((filename) => {
-      createDocCard(filename, "success");
     });
 
-    toggleNoDocsMessage();
-  } catch (err) {
-    console.error("❌ Error al cargar documentos:", err);
-    alert("❌ No se pudieron cargar los documentos desde el sistema.");
+
+    document.querySelector(".document-grid").appendChild(card);
+    return card;
   }
-}
+
+  function toggleNoDocsMessage() {
+    const grid = document.querySelector(".document-grid");
+    const message = document.getElementById("no-docs-message");
+
+    if (grid.children.length === 0) {
+      message.style.display = "block";
+    } else {
+      message.style.display = "none";
+    }
+  }
 
 
-// Cargar documentos automáticamente al iniciar la página
-window.addEventListener("DOMContentLoaded", () => {
-  cargarDocumentosDesdeBackend();
-});
+  function updateCardStatus(card, status) {
+    const badge = card.querySelector(".badge");
+    if (!badge) return;
 
-  </script>
+    const textMap = {
+      processing: "En proceso...",
+      success: "Subido",
+      error: "Error"
+    };
+    const classMap = {
+      processing: "processing",
+      success: "ready",
+      error: "error"
+    };
+
+    badge.textContent = textMap[status];
+    badge.className = `badge ${classMap[status]}`;
+  }
+
+  function formatDateTime(date) {
+    return date.toLocaleString("es-ES", {
+      dateStyle: "short",
+      timeStyle: "short"
+    });
+  }
+
+  async function cargarDocumentosDesdeBackend() {
+    try {
+      const res = await fetch("http://localhost:5000/documentos_unicos/Knowledge-Navigator");
+      if (!res.ok) throw new Error("No se pudo obtener la lista de documentos");
+
+      const documentos = await res.json();
+      console.log("📄 Documentos cargados:", documentos);
+
+      if (documentos.length === 0) {
+        toggleNoDocsMessage();
+        return;
+      }
+
+      documentos.forEach((filename) => {
+        createDocCard(filename, "success");
+      });
+
+      toggleNoDocsMessage();
+    } catch (err) {
+      console.error("❌ Error al cargar documentos:", err);
+      alert("❌ No se pudieron cargar los documentos desde el sistema.");
+    }
+  }
+
+
+  // Cargar documentos automáticamente al iniciar la página
+  window.addEventListener("DOMContentLoaded", () => {
+    cargarDocumentosDesdeBackend();
+  });
+
+  localStorage.setItem("documentosSubidos", documentos.length > 0 ? "true" : "false");
+
+  async function cargarDocumentosDesdeBackend() {
+    try {
+      const res = await fetch("http://localhost:5000/documentos_unicos/Knowledge-Navigator");
+      if (!res.ok) throw new Error("No se pudo obtener la lista de documentos");
+
+      const documentos = await res.json();
+      console.log("📄 Documentos cargados:", documentos);
+
+      // Guardar en localStorage el estado
+      localStorage.setItem("documentosSubidos", documentos.length > 0 ? "true" : "false");
+
+      if (documentos.length === 0) {
+        toggleNoDocsMessage();
+        return;
+      }
+
+      documentos.forEach((filename) => {
+        createDocCard(filename, "success");
+      });
+
+      toggleNoDocsMessage();
+    } catch (err) {
+      console.error("❌ Error al cargar documentos:", err);
+      alert("❌ No se pudieron cargar los documentos desde el sistema.");
+    }
+  }
+
+</script>
 </body>
 
 </html>
