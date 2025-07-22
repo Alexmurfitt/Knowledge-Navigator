@@ -84,7 +84,7 @@
         fileCards.forEach(({ card }) => updateCardStatus(card, "error"));
         const text = await res.text();
         throw new Error(`Error del servidor (${res.status}): ${text}`);
-      }
+      } 
 
       const data = contentType.includes("application/json")
         ? await res.json()
