@@ -37,15 +37,19 @@
     
     <div class="chat-input">
       <input type="text" id="question" placeholder="Ask a question about your documents..." />
-      <button onclick="askBot()">➤</button>
+      <button onclick='askBot()'>➤</button>
     </div>
   </main>
 
 
   <script>
+
+    
+    
     async function uploadPDFs() {
       const files = document.getElementById("pdfFiles").files;
       const formData = new FormData();
+      const BACKEND_URL = "http://localhost:5000"
       for (let file of files) formData.append("files", file);
 
       try {
@@ -77,13 +81,14 @@
 
     async function askBot() {
       const question = document.getElementById("question").value;
+      const BACKEND_URL = "http://localhost:5000"
+
       if (!question.trim()) return;
 
-      // Añadir pregunta del usuario al chat
       appendMessage("Tú", question);
-
-      // Limpiar input
       document.getElementById("question").value = "";
+
+      
 
       try {
         const res = await fetch("http://localhost:5000/ask", {
@@ -93,12 +98,14 @@
         });
 
         const data = await res.json();
+        console.log(data)
         appendMessage("Bot", data.answer);
       } catch (error) {
         console.error("Error:", error);
         appendMessage("Bot", "Ocurrió un error al obtener la respuesta.");
       }
     }
+
 
     // Función para agregar mensajes al chatBox
     function appendMessage(sender, message) {

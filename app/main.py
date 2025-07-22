@@ -18,6 +18,11 @@ from langchain.chains import RetrievalQA
 
 load_dotenv()
 
+google_api_key=os.getenv("GOOGLE-API-KEY")
+url=os.getenv("QDRANT-URL")
+api_key=os.getenv("QDRANT-API-KEY")
+collection_name="Knowledge-Navigator"
+
 app = FastAPI()
 
 # CORS: Permitir conexiones desde tu HTML
@@ -30,7 +35,7 @@ app.add_middleware(
 
 # --- Variables globales ---
 vector_store = None
-model = init_chat_model("gemini-2.5-flash", model_provider="google_genai", api_key=os.getenv("GOOGLE-API-KEY"))
+model = init_chat_model("gemini-2.5-flash", model_provider="google_genai", api_key=google_api_key)
 
 # Prompt
 template = """   
@@ -76,9 +81,7 @@ from fastapi import HTTPException
 
 
 
-url=os.getenv("QDRANT-URL")
-api_key=os.getenv("QDRANT-API-KEY")
-collection_name="Knowledge-Navigator"
+
 
 
 @app.post("/upload")
@@ -98,7 +101,7 @@ async def upload_pdfs(files: List[UploadFile] = File(...)):
         crear_indice(collection_name=collection_name)
         chunks = split_chunks(all_docs)
         print(f"📄 Total de fragmentos: {len(chunks)}")
-
+#model="mxbai-embed-large:latest"
         embeddings = OllamaEmbeddings(model="mxbai-embed-large:latest")
         global vector_store
         vector_store = QdrantVectorStore.from_documents(
@@ -193,6 +196,7 @@ async def ask_bot(req: ChatRequest):
     if not vector_store:
         return {"error": "No hay documentos cargados."}
 
+    
     chain = RetrievalQA.from_chain_type(
         llm=model,
         retriever=vector_store.as_retriever(),
@@ -201,6 +205,7 @@ async def ask_bot(req: ChatRequest):
     )
 
     result = chain.invoke({"query": req.question})
+    print(result)
     return {"answer": result["result"]}
 
 

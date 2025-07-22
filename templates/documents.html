@@ -64,12 +64,40 @@
     const formData = new FormData();
     const fileCards = [];
 
-    // Crear una card por archivo y agregar al FormData
-    for (let file of files) {
-      formData.append("files", file);
-      const card = createDocCard(file.name, "processing");
-      toggleNoDocsMessage(); // Ocultar mensaje si hay archivos
-      fileCards.push({ file, card });
+      // Crear una card por archivo y agregar al FormData
+      for (let file of files) {
+        formData.append("files", file);
+        const card = createDocCard(file.name, "processing");
+        toggleNoDocsMessage(); // Ocultar mensaje si hay archivos
+        fileCards.push({ file, card });
+      }
+
+      try {
+        const res = await fetch("http://localhost:5000/upload", {
+          method: "POST",
+          body: formData
+        });
+
+        const contentType = res.headers.get("content-type");
+
+        if (!res.ok) {
+          fileCards.forEach(({ card }) => updateCardStatus(card, "error"));
+          const text = await res.text();
+          throw new Error(`Error del servidor (${res.status}): ${text}`);
+        }
+
+        const data = contentType.includes("application/json")
+          ? await res.json()
+          : { message: "Respuesta no válida" };
+
+        fileCards.forEach(({ card }) => updateCardStatus(card, "success"));
+        alert(data.message);
+
+      } catch (err) {
+        console.error("❌ Error al subir archivos:", err);
+        fileCards.forEach(({ card }) => updateCardStatus(card, "error"));
+        alert("Error al subir archivos.");
+      }
     }
 
     try {
