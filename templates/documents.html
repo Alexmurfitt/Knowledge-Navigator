@@ -64,40 +64,12 @@
     const formData = new FormData();
     const fileCards = [];
 
-      // Crear una card por archivo y agregar al FormData
-      for (let file of files) {
-        formData.append("files", file);
-        const card = createDocCard(file.name, "processing");
-        toggleNoDocsMessage(); // Ocultar mensaje si hay archivos
-        fileCards.push({ file, card });
-      }
-
-      try {
-        const res = await fetch("http://localhost:5000/upload", {
-          method: "POST",
-          body: formData
-        });
-
-        const contentType = res.headers.get("content-type");
-
-        if (!res.ok) {
-          fileCards.forEach(({ card }) => updateCardStatus(card, "error"));
-          const text = await res.text();
-          throw new Error(`Error del servidor (${res.status}): ${text}`);
-        }
-
-        const data = contentType.includes("application/json")
-          ? await res.json()
-          : { message: "Respuesta no válida" };
-
-        fileCards.forEach(({ card }) => updateCardStatus(card, "success"));
-        alert(data.message);
-
-      } catch (err) {
-        console.error("❌ Error al subir archivos:", err);
-        fileCards.forEach(({ card }) => updateCardStatus(card, "error"));
-        alert("Error al subir archivos.");
-      }
+    // Crear una card por archivo y agregar al FormData
+    for (let file of files) {
+      formData.append("files", file);
+      const card = createDocCard(file.name, "processing");
+      toggleNoDocsMessage(); // Ocultar mensaje si hay archivos
+      fileCards.push({ file, card });
     }
 
     try {
@@ -127,7 +99,6 @@
       alert("Error al subir archivos.");
     }
   }
-
 
   function createDocCard(filename, status = "processing") {
     const badgeClassMap = {
@@ -162,10 +133,8 @@
     </div>
     <div class="actions">
       <button title="View" disabled>👁️</button>
-      <button title="Delete"><i class="fas fa-trash-alt"></i>
-</button>
-    </div>
-  `;
+      <button title="Delete"><i class="fas fa-trash-alt"></i></button>
+    </div>`;
 
     const deleteBtn = card.querySelector('button[title="Delete"]');
     deleteBtn.addEventListener("click", async () => {
