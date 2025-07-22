@@ -1,5 +1,3 @@
-# main.py (FastAPI backend)
-
 from fastapi import FastAPI, UploadFile, File, Form
 from pydantic import BaseModel
 from typing import List
@@ -15,6 +13,10 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.prompts import PromptTemplate
 from langchain.chat_models import init_chat_model
 from langchain.chains import RetrievalQA
+
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
+
 
 load_dotenv()
 
@@ -36,25 +38,22 @@ app.add_middleware(
 # --- Variables globales ---
 vector_store = None
 model = init_chat_model("gemini-2.5-flash", model_provider="google_genai", api_key=google_api_key)
+memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+
 
 # Prompt
 template = """   
-Eres secretario administrativo profesional de una empresa a nivel global con gran reputación.
-Responderas de manera breve y efectiva y al final de la respuesta sugueriras otras preguntas.
+Eres un secretario administrativo profesional en una empresa.
+Responde de manera clara, organizada y visualmente atractiva.
 
-Tu misión es dar la respuesta más concreta a lo que se te pide de esta forma:
-1) Darás la respuesta breve a lo que se te pide.
-2) Pondrás un ejemplo sencillo para entender mejor el concepto que se te pida (Opcional: Solo si es necesario ya que cuando pida datos de personas de la empresa obviaras el ejemplo.)
-3) Sugerirás, acorde al {context} una pregunta que le podría interesar al usuario 
-Si la información para responder no se encuentra en el contexto proporcionado, debes decir con elegancia que no tienes dicha información en tu base de datos. No inventes nada.
+Tu respuesta debe tener este formato estructurado:
 
-**Contexto de la información:**
+**Contexto disponible:**
 {context}
 
 **Pregunta del usuario:**
 {question}
 
-**Tu Respuesta de secretario profesional:**
 """
 
 
@@ -80,8 +79,32 @@ from fastapi.responses import JSONResponse
 from fastapi import HTTPException
 
 
+# --- Endpoint: preguntar al bot ---
+class ChatRequest(BaseModel):
+    question: str
 
 
+@app.post("/ask")
+async def ask_bot(req: ChatRequest):
+    global vector_store
+
+    if not vector_store:
+        return {"error": "No hay documentos cargados."}
+
+    qa_chain = ConversationalRetrievalChain.from_llm(
+        llm=model,
+        retriever=vector_store.as_retriever(),
+        memory=memory,
+        chain_type="stuff",  # puede ser "stuff", "map_reduce", etc.
+        combine_docs_chain_kwargs={"prompt": secretario_PROMPT}
+    )
+
+    result = qa_chain.invoke({"question": req.question})
+    return {"answer": result["answer"]}
+
+@app.get("/chat-history")
+def get_chat_history():
+    return {"history": [msg.content for msg in memory.chat_memory.messages]}
 
 
 @app.post("/upload")
@@ -186,27 +209,9 @@ async def eliminar_pdf_qdrant(collection_name: str, pdf_nombre: str):
 
 
 
-# --- Endpoint: preguntar al bot ---
-class ChatRequest(BaseModel):
-    question: str
 
-@app.post("/ask")
-async def ask_bot(req: ChatRequest):
-    global vector_store
-    if not vector_store:
-        return {"error": "No hay documentos cargados."}
 
-    
-    chain = RetrievalQA.from_chain_type(
-        llm=model,
-        retriever=vector_store.as_retriever(),
-        return_source_documents=True,
-        chain_type_kwargs={"prompt": secretario_PROMPT}
-    )
 
-    result = chain.invoke({"query": req.question})
-    print(result)
-    return {"answer": result["result"]}
 
 
 @app.get("/documentos_unicos/{collection_name}")
