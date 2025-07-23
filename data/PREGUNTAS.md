@@ -49,7 +49,7 @@ Estas preguntas están específicamente formuladas para:
 
 ### 📄 Documento 5: *Gobernanza algorítmica y auditoría de sesgo – Bustelo*
 
-12. **¿Qué se entiende por “auditoría algorítmica” y qué desafíos presenta su implementación?**
+12. ****
 13. **¿Qué propone el documento para mitigar los sesgos algorítmicos en sistemas de decisión automatizada?**
 
 ---
@@ -65,7 +65,7 @@ Estas preguntas están específicamente formuladas para:
 
 16. **¿Qué elementos deben garantizarse para que un sistema de IA sea considerado transparente?**
 17. **¿Cómo se define la opacidad algorítmica en este documento y qué consecuencias conlleva?**
-
+18. **¿Cuál es la definición de actuación automatizada según el artículo 41.1 de la Ley 40/2015?**
 ---
 
 ## 📊 Siguientes pasos sugeridos
@@ -77,3 +77,8 @@ Estas preguntas están específicamente formuladas para:
 | 🧪 3 | Evaluar automáticamente con RAGAS usando estas preguntas como **ground truth**.           |
 | 🧠 4 | Incorporar resultados al diseño del agente de fusión semántica.                           |
 
+# artículo 41.1 de la Ley 40/2015, de
+1 de octubre, de Régimen Jurídico del Sector Público nos ofrece una definición
+de actuación automatizada
+
+¿Que definicion nos ofrece el artículo 41.1 de la Ley 40/2015?

@@ -9,14 +9,13 @@ import os
 from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_ollama import OllamaEmbeddings
 from langchain_qdrant import QdrantVectorStore
-
+from langchain_ollama import OllamaEmbeddings
 # 0. 🔐 Cargar variables de entorno desde .env
 load_dotenv()
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-COLLECTION_NAME = "knowledge_navigator"
+COLLECTION_NAME = "Knowledge-Navigator"
 PDF_DIR = "data/pdfs"
 
 # 1. 📥 Cargar documentos PDF con metadatos por página
@@ -58,28 +57,27 @@ def dividir_en_fragmentos(documentos):
     print(f"✅ Fragmentos generados: {len(chunks)}")
     return chunks
 
-# 3. 🧠 Generar embeddings usando Ollama local
-def generar_embeddings():
-    print("🧠 Generando embeddings...")
-    return OllamaEmbeddings(model="nomic-embed-text")
 
-# 4. 📡 Conectar con Qdrant y almacenar los fragmentos
-def indexar_en_qdrant(chunks, embeddings):
+# 3. 📡 Conectar con Qdrant y almacenar los fragmentos
+def indexar_en_qdrant(chunks):
+    embeddings = OllamaEmbeddings(model="mxbai-embed-large:latest")
     print("📡 Conectando con Qdrant Cloud...")
     print(f"📦 Guardando en colección '{COLLECTION_NAME}'...")
     vectorstore = QdrantVectorStore.from_documents(
-        documents=chunks,
-        embedding=embeddings,
-        url=QDRANT_URL,
-        api_key=QDRANT_API_KEY,
-        collection_name=COLLECTION_NAME,
-        prefer_grpc=False  # Se recomienda False para evitar errores con proxies/firewalls
-    )
+    documents=chunks,
+    embedding=embeddings,
+    url= QDRANT_URL,
+    api_key=QDRANT_API_KEY,
+    collection_name=COLLECTION_NAME,
+    # prefer_grpc=False,
+    force_recreate=True  # 🟢 Añade esto para evitar conflicto dimensional
+)
+
     print("✅ ¡Vector store cargado exitosamente en Qdrant!")
 
 # 🏁 Ejecución principal
 if __name__ == "__main__":
     documentos = cargar_documentos(PDF_DIR)
     chunks = dividir_en_fragmentos(documentos)
-    embeddings = generar_embeddings()
-    indexar_en_qdrant(chunks, embeddings)
+    # genembeddings = generar_embeddings()
+    indexar_en_qdrant(chunks)
