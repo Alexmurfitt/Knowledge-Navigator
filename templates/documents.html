@@ -40,6 +40,7 @@
     </div>
 
 
+
     <p id="no-docs-message" style="text-align: center; color: #666;">
       No tienes ningún PDF subido aún.
     </p>
@@ -71,8 +72,9 @@
       toggleNoDocsMessage(); // Ocultar mensaje si hay archivos
       fileCards.push({ file, card });
     }
-
+    fileCards.forEach(({ card }) => simulateProgress(card));
     try {
+
       const res = await fetch("http://localhost:5000/upload", {
         method: "POST",
         body: formData
@@ -84,21 +86,66 @@
         fileCards.forEach(({ card }) => updateCardStatus(card, "error"));
         const text = await res.text();
         throw new Error(`Error del servidor (${res.status}): ${text}`);
-      } 
+      }
 
       const data = contentType.includes("application/json")
         ? await res.json()
         : { message: "Respuesta no válida" };
 
-      fileCards.forEach(({ card }) => updateCardStatus(card, "success"));
-      alert(data.message);
+      fileCards.forEach(({ card }) => {
+        completeProgressBar(card);
+        updateCardStatus(card, "success");
+      });
+
 
     } catch (err) {
       console.error("❌ Error al subir archivos:", err);
-      fileCards.forEach(({ card }) => updateCardStatus(card, "error"));
+      fileCards.forEach(({ card }) => {
+        completeProgressBar(card);
+        updateCardStatus(card, "error");
+      });
+
       alert("Error al subir archivos.");
     }
   }
+
+  function completeProgressBar(card) {
+    const bar = card.querySelector(".progress-bar");
+    if (bar) {
+      bar.style.transition = "width 0.3s ease"; // para suavizar el salto
+      bar.style.width = "100%";
+    }
+
+    // Limpia el intervalo si existe
+    if (card._progressInterval) {
+      clearInterval(card._progressInterval);
+      delete card._progressInterval;
+    }
+  }
+
+
+  function simulateProgress(card) {
+    const progressBar = card.querySelector(".progress-bar");
+    let width = 0;
+
+    if (!progressBar) return;
+
+    const interval = setInterval(() => {
+      width += 5;
+
+      if (width >= 90) {
+        clearInterval(interval);
+        progressBar.style.width = "90%";
+        return;
+      }
+
+      progressBar.style.width = `${width}%`;
+    }, 300);
+
+    // Guardar referencia para que luego puedas limpiarla si deseas
+    card._progressInterval = interval;
+  }
+
 
   function createDocCard(filename, status = "processing") {
     const badgeClassMap = {
@@ -120,21 +167,25 @@
     card.className = "doc-card";
 
     card.innerHTML = `
-    <div class="doc-header">
-      <div class="doc-icon">📄</div>
-      <div class="doc-info">
-        <h3>${filename}</h3>
-        <span class="badge ${badgeClassMap[status]}">${badgeTextMap[status]}</span>
+      <div class="doc-header">
+        <div class="doc-icon">📄</div>
+        <div class="doc-info">
+          <h3>${filename}</h3>
+          <span class="badge ${badgeClassMap[status]}">${badgeTextMap[status]}</span>
+        </div>
       </div>
-    </div>
-    <p class="doc-meta">Subido el ${formattedDate}</p>
-    <div class="tags">
-      <span class="tag">PDF</span>
-    </div>
-    <div class="actions">
-      <button title="View" disabled>👁️</button>
-      <button title="Delete"><i class="fas fa-trash-alt"></i></button>
-    </div>`;
+      <p class="doc-meta">Subido el ${formattedDate}</p>
+      <div class="tags">
+        <span class="tag">PDF</span>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar" style="width: 0%;"></div>
+      </div>
+      <div class="actions">
+        <button title="View" disabled>👁️</button>
+        <button title="Delete"><i class="fas fa-trash-alt"></i></button>
+      </div>`;
+
 
     const deleteBtn = card.querySelector('button[title="Delete"]');
     deleteBtn.addEventListener("click", async () => {

@@ -250,3 +250,17 @@ button {
 button:hover i {
   color: red;
 }
+
+.progress-bar-container {
+  height: 6px;
+  background-color: #ddd;
+  border-radius: 3px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background-color: #007bff;
+  transition: width 0.3s ease;
+}
