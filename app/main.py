@@ -84,6 +84,7 @@ class ChatRequest(BaseModel):
     question: str
 
 
+
 @app.post("/ask")
 async def ask_bot(req: ChatRequest):
     global vector_store
@@ -102,9 +103,13 @@ async def ask_bot(req: ChatRequest):
     result = qa_chain.invoke({"question": req.question})
     return {"answer": result["answer"]}
 
+
+
+
 @app.get("/chat-history")
 def get_chat_history():
     return {"history": [msg.content for msg in memory.chat_memory.messages]}
+
 
 
 @app.post("/upload")
@@ -145,6 +150,8 @@ async def upload_pdfs(files: List[UploadFile] = File(...)):
         print("❌ Error en /upload:", e)
         raise HTTPException(status_code=500, detail="Error al procesar los archivos.")
 
+
+
 def crear_indice(collection_name : str):
     try:
         client = QdrantClient(
@@ -163,9 +170,6 @@ def crear_indice(collection_name : str):
 
     except Exception as e:
         print(f" No se pudo crear el indice (puede que exista): {e}")
-
-
-
 
 
 from qdrant_client import QdrantClient, models
@@ -205,11 +209,6 @@ async def eliminar_pdf_qdrant(collection_name: str, pdf_nombre: str):
     except Exception as e:
         print(f"Error al eliminar los datos de Qdrant: {e}")
         return JSONResponse(content={"success": False}, status_code=500)
-    
-
-
-
-
 
 
 
@@ -225,7 +224,7 @@ async def mostrar_documentos_unicos(collection_name: str):
         scrolled_points, llamada= client.scroll( # La "llamada" es porque client.scroll devuelve (puntos, llamada) y la llamada es para la siguiente llamda (no se necesita para nada), es decir me devuelve una tupla de 2 valores, Puntos y llamada
             collection_name=collection_name,
             limit=10000,    # El limit es la cantidad de endpoint que quiero ver
-            with_payload=True   #Awui esta incluyendo los metadatos
+            with_payload=True   #Aqui esta incluyendo los metadatos
         )
 
         print(f"Lo que devuelve scrolled_points = {scrolled_points[0]}")

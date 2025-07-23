@@ -37,6 +37,9 @@
 
     <div class="chat-input">
       <input type="text" id="question" placeholder="Ask a question about your documents..." />
+      <label>
+        <input type="checkbox" id="use_internet"> Buscar en Internet
+      </label>
       <button onclick='askBot()'>➤</button>
     </div>
   </main>
@@ -86,29 +89,44 @@
 
     async function askBot() {
       const question = document.getElementById("question").value;
+      const use_internet = document.getElementById("use_internet").checked;
 
       if (!question.trim()) return;
 
       appendMessage("Tú", question);
       document.getElementById("question").value = "";
 
-
-
       try {
         const res = await fetch("http://localhost:5000/ask", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question })
+          body: JSON.stringify({ question, use_internet })
         });
 
         const data = await res.json();
-        console.log(data)
-        appendMessage("Bot", data.answer);
+        console.log(data);
+        // Si quieres mostrar el tipo de fuente debajo del mensaje
+        let responseText = data.answer;
+        if (data.source_type) {
+          responseText += `\n\n<span class="source-label">[Fuente: ${data.source_type}]</span>`;
+        }
+        appendMessage("Bot", responseText);
+
+
       } catch (error) {
         console.error("Error:", error);
         appendMessage("Bot", "Ocurrió un error al obtener la respuesta.");
       }
     }
+
+    function parseMarkdownToHTML(text) {
+      return text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+    }
+
+    function formatWithLineBreaks(text) {
+      return text.replace(/\n/g, "<br>");
+    }
+
 
     // Función para agregar mensajes al chatBox
     function appendMessage(sender, message) {
@@ -118,6 +136,12 @@
 
       const msgContent = document.createElement("p");
       msgContent.textContent = message;
+
+      if (sender === "Bot") {
+        msgContent.innerHTML = formatWithLineBreaks(parseMarkdownToHTML(message));  // Convierte **texto** a <strong>
+      } else {
+        msgContent.textContent = message;
+      }
 
       const timestamp = document.createElement("span");
       timestamp.classList.add("timestamp");
@@ -154,8 +178,14 @@
           const msgDiv = document.createElement("div");
           msgDiv.classList.add("message", msg.sender === "Tú" ? "user" : "bot");
 
+
           const msgContent = document.createElement("p");
-          msgContent.textContent = msg.message;
+          if (msg.sender === "Bot") {
+            msgContent.innerHTML = formatWithLineBreaks(parseMarkdownToHTML(msg.message));
+          } else {
+            msgContent.textContent = msg.message;
+          }
+
 
           const timestamp = document.createElement("span");
           timestamp.classList.add("timestamp");

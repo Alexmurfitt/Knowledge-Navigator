@@ -72,69 +72,153 @@ def split_chunks(docs):
 
 
 
-# --- Endpoint: preguntar al bot ---
+
+
+
+
+
+
+# @app.post("/ask")
+# async def ask_bot(req: ChatRequest):
+#     global suggested_question, memory
+
+#     affirmative_responses = ["si", "sí", "yes", "ok", "vale", "dale", "procede", "claro"]
+#     actual_prompt = req.question
+
+#     if suggested_question and req.question.lower().strip() in affirmative_responses:
+#         actual_prompt = suggested_question
+#         suggested_question = None
+
+#     # RAG primero
+#     rag_prompt = PromptTemplate(
+#         template=f"""Basándote únicamente en el siguiente contexto, responde la pregunta del usuario explicando lo encontrado. Haz una pregunta relacionada con el contexto encontrado para recomendar al usuario.
+#         Si la información no está en el contexto, responde EXACTAMENTE: "{Sin_Informacion}". No añadas nada más.
+#         Contexto: {{context}}\nPregunta: {{question}}\n
+#         IMPORTANTE: Responde con frases claras y separadas por saltos de línea (\n) para facilitar la lectura. Usa listas cuando sea necesario.
+#         Respuesta:""",
+#         input_variables=["context", "question"]
+#     )
+#     rag_chain = RetrievalQA.from_chain_type(
+#         llm=model,
+#         retriever=vector_store.as_retriever(search_kwargs={'k': 6}),
+#         return_source_documents=True,
+#         chain_type_kwargs={"prompt": rag_prompt}
+#     )
+#     rag_result = rag_chain.invoke({"query": actual_prompt})
+#     rag_answer = rag_result['result']
+#     sources = rag_result.get('source_documents', [])
+
+#     # Si se forzó uso de internet o no se encontró info
+#     if req.use_internet or Sin_Informacion in rag_answer:
+#         search_results = search_tool.run(actual_prompt)
+#         internet_prompt = f"""Eres un asistente de IA. Basándote en el historial de la conversación y los siguientes resultados de una búsqueda en Internet, 
+#         responde a la "Pregunta nueva" del usuario de una forma amable y útil.
+#         Historial de la conversación: {memory.chat_memory}
+#         Resultados de búsqueda: "{search_results}"
+#         Pregunta nueva: {actual_prompt}
+#         IMPORTANTE: Responde con frases claras y separadas por saltos de línea (\n) para facilitar la lectura. Usa listas cuando sea necesario.
+#         Respuesta final:"""
+#         final_response = model.invoke(internet_prompt).content
+#         final_sources = []
+#     else:
+#         final_response = rag_answer
+#         final_sources = [doc.dict() for doc in sources]
+
+#     if '?' in final_response:
+#         potential_question = final_response.split('?')[-1].strip()
+#         if len(potential_question) > 5:
+#             suggested_question = potential_question
+#     else:
+#         suggested_question = None
+
+#     memory.save_context({"input": actual_prompt}, {"output": final_response})
+
+#     return {
+#         "answer": final_response,
+#         "suggested_question": suggested_question,
+#         "sources": final_sources
+#     }
+
+def is_simple_question(question: str) -> bool:
+    question = question.lower()
+    keywords = ["quién", "qué", "cuándo", "dónde", "cuánto", "cómo"]
+    exclusion_terms = ["documento", "pdf", "archivo", "tabla", "contenido"]
+    return (
+        len(question.split()) < 8 and
+        any(word in question for word in keywords) and
+        not any(term in question for term in exclusion_terms)
+    )
+
 class ChatRequest(BaseModel):
     question: str
-
+    use_internet: bool = False  # valor por defecto si no se marca
+    
 @app.post("/ask")
 async def ask_bot(req: ChatRequest):
     global suggested_question, memory
 
-    # Lógica para manejar respuestas afirmativas a preguntas sugeridas
-    affirmative_responses = ["si", "sí", "yes", "ok", "vale", "dale", "procede", "claro"]
     actual_prompt = req.question
-    
-    if suggested_question and req.question.lower().strip() in affirmative_responses:
-        actual_prompt = suggested_question
-        suggested_question = None  # Limpiar la sugerencia después de usarla
+    simple = is_simple_question(actual_prompt)
 
-    # 1. Ejecutar la cadena RAG
-    rag_prompt = PromptTemplate(
-        template=f"""Basándote únicamente en el siguiente contexto, responde la pregunta del usuario explicando lo encontrado. Haz una pregunta relacionada con el contexto encontrado para recomendar al usuario.
-        Si la información no está en el contexto, responde EXACTAMENTE: "{Sin_Informacion}". No añadas nada más.
-        Contexto: {{context}}\nPregunta: {{question}}\nRespuesta:""",
-        input_variables=["context", "question"]
-    )
-    rag_chain = RetrievalQA.from_chain_type(
-        llm=model,
-        retriever=vector_store.as_retriever(search_kwargs={'k': 6}),
-        return_source_documents=True,
-        chain_type_kwargs={"prompt": rag_prompt}
-    )
-    rag_result = rag_chain.invoke({"query": actual_prompt})
-    rag_answer = rag_result['result']
-    sources = rag_result.get('source_documents', [])
-
-    # Aqui miro si busca o no en internet
-    if Sin_Informacion in rag_answer:
-        search_results = search_tool.run(actual_prompt)
-        internet_prompt = f"""Eres un asistente de IA. Basándote en el historial de la conversación y los siguientes resultados de una búsqueda en Internet, 
-        responde a la "Pregunta nueva" del usuario de una forma amable y útil.
-        Historial de la conversación: {memory.chat_memory}
-        Resultados de búsqueda: "{search_results}"
-        Pregunta nueva: {actual_prompt}
-        Respuesta final:"""
-        final_response = model.invoke(internet_prompt).content
+    # Si es una pregunta simple, respondemos directamente con el modelo sin RAG ni Internet
+    if simple and not req.use_internet:
+        final_response = model.invoke(actual_prompt).content
         final_sources = []
+        source_type = "Modelo Lenguaje"
     else:
-        final_response = rag_answer
-        final_sources = [doc.dict() for doc in sources] # Convertir documentos a diccionarios
+        # RAG: Recuperación desde base vectorial
+        rag_prompt = PromptTemplate(
+            template=f"""Basándote únicamente en el siguiente contexto, responde la pregunta del usuario explicando lo encontrado. Haz una pregunta relacionada con el contexto encontrado para recomendar al usuario.
+            Si la información no está en el contexto, responde EXACTAMENTE: "{Sin_Informacion}". No añadas nada más.
+            Contexto: {{context}}\nPregunta: {{question}}\nRespuesta:""",
+            input_variables=["context", "question"]
+        )
 
-    # Aqui es para guardar la respuesta
+        rag_chain = RetrievalQA.from_chain_type(
+            llm=model,
+            retriever=vector_store.as_retriever(search_kwargs={'k': 6}),
+            return_source_documents=True,
+            chain_type_kwargs={"prompt": rag_prompt}
+        )
+        rag_result = rag_chain.invoke({"query": actual_prompt})
+        rag_answer = rag_result['result']
+        sources = rag_result.get('source_documents', [])
+
+        # Si el usuario activó internet o no hay info en la base
+        if req.use_internet or Sin_Informacion in rag_answer:
+            search_results = search_tool.run(actual_prompt)
+            internet_prompt = f"""Eres un asistente de IA. Basándote en el historial de la conversación y los siguientes resultados de una búsqueda en Internet, 
+            responde a la "Pregunta nueva" del usuario de una forma amable y útil.
+            Historial de la conversación: {memory.chat_memory}
+            Resultados de búsqueda: "{search_results}"
+            Pregunta nueva: {actual_prompt}
+            Respuesta final:"""
+            final_response = model.invoke(internet_prompt).content
+            final_sources = []
+            source_type = "Internet"
+        else:
+            final_response = rag_answer
+            final_sources = [doc.dict() for doc in sources]
+            source_type = "Documentos"
+
+    # Guardar contexto y sugerencias
     if '?' in final_response:
         potential_question = final_response.split('?')[-1].strip()
         if len(potential_question) > 5:
             suggested_question = potential_question
     else:
         suggested_question = None
-    #Aqui se guarda en memoria
+
     memory.save_context({"input": actual_prompt}, {"output": final_response})
-    
+
     return {
         "answer": final_response,
         "suggested_question": suggested_question,
-        "sources": final_sources
+        "sources": final_sources,
+        "source_type": source_type
     }
+
+
 
 @app.get("/chat-history")
 def get_chat_history():
