@@ -19,6 +19,10 @@ from langchain.chains import ConversationalRetrievalChain
 from fastapi.responses import JSONResponse
 from fastapi import HTTPException
 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+
 from langchain.docstore.document import Document
 import fitz
 
@@ -33,8 +37,12 @@ collection_name = os.getenv("COLLECTION-NAME")
 
 Sin_Informacion = "No tengo información sobre eso en mi base de datos"  #Puesto por Aaron
 
-
 app = FastAPI()
+
+
+
+
+
 
 # CORS: Permitir conexiones desde tu HTML
 app.add_middleware(
@@ -426,4 +434,3 @@ async def mostrar_documentos_unicos(collection_name: str):
     except Exception as e:
         print(f"Ha ocurrido un error: {e}")
         return []
-

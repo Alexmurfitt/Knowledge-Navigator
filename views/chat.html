@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DocuChat - Chat</title>
-  <link rel="stylesheet" href="../static/chatstyles.css" />
+  <link rel="stylesheet" href="../styles/chatstyles.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
@@ -27,6 +27,9 @@
     <div class="chat-header">
       <div class="chat-header-title"><span class="chat-icon">🤖</span> Document Assistant</div>
       <button class="cleanChat" onclick="clearChat()">Limpiar Chat</button>
+      <label>
+        <input type="checkbox" id="use_internet"> Buscar en Internet
+      </label>
     </div>
     <div id="chatBox" class="chat-messages">
       <div class="message bot">
@@ -37,9 +40,7 @@
 
     <div class="chat-input">
       <input type="text" id="question" placeholder="Ask a question about your documents..." />
-      <label>
-        <input type="checkbox" id="use_internet"> Buscar en Internet
-      </label>
+
       <button onclick='askBot()'>➤</button>
     </div>
   </main>
@@ -86,7 +87,6 @@
       }
     });
 
-
     async function askBot() {
       const question = document.getElementById("question").value;
       const use_internet = document.getElementById("use_internet").checked;
@@ -126,7 +126,6 @@
     function formatWithLineBreaks(text) {
       return text.replace(/\n/g, "<br>");
     }
-
 
     // Función para agregar mensajes al chatBox
     function appendMessage(sender, message) {
@@ -199,9 +198,7 @@
       }
     }
 
-
     window.addEventListener("DOMContentLoaded", loadChatHistory);
-
 
     function clearChat() {
       const chatBox = document.getElementById("chatBox");
