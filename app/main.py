@@ -39,7 +39,7 @@ Sin_Informacion = "No tengo información sobre eso en mi base de datos"  #Puesto
 
 app = FastAPI()
 
-
+canceled_uploads = {}
 
 
 
@@ -205,7 +205,6 @@ def split_chunks(docs):
     splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=50)
     return splitter.split_documents(docs)
 
-
 def is_simple_question(question: str) -> bool:
     question = question.lower()
     keywords = ["quién", "qué", "cuándo", "dónde", "cuánto", "cómo"]
@@ -308,49 +307,84 @@ def crear_indice(collection_name : str):
     except Exception as e:
         print(f" No se pudo crear el indice (puede que exista): {e}")
 
+from fastapi import UploadFile, File, HTTPException
+from fastapi.responses import JSONResponse
+from typing import List
+
+# 🔁 Asegúrate de tener esta variable definida al inicio de tu archivo:
+canceled_uploads = {}  # {"nombre.pdf": True}
+
+
 @app.post("/upload")
 async def upload_pdfs(files: List[UploadFile] = File(...)):
     """
-    Endpoint para subir archivos PDF. Utiliza la lógica avanzada para procesarlos
-    y almacenarlos en Qdrant.
+    Endpoint para subir archivos PDF con verificación de cancelación en tiempo real.
     """
     all_final_chunks = []
     try:
         print("📥 Archivos recibidos:", [f.filename for f in files])
-        
-        for uploaded_file in files:
-            if not uploaded_file.filename.lower().endswith('.pdf'):
-                raise HTTPException(status_code=400, detail=f"El archivo {uploaded_file.filename} no es un PDF.")
 
-            # Leer el contenido del archivo en memoria
+        for uploaded_file in files:
+            filename = uploaded_file.filename
+
+            if not filename.lower().endswith('.pdf'):
+                raise HTTPException(status_code=400, detail=f"El archivo {filename} no es un PDF.")
+
+            # # ⛔ CANCELADO antes de procesar
+            # if canceled_uploads.get(filename):
+            #     print(f"🚫 Subida cancelada antes de iniciar procesamiento de '{filename}'.")
+            #     canceled_uploads.pop(filename, None)
+            #     continue
+
             file_content = await uploaded_file.read()
-            
+            print(f"Tamaño del archivo leído: {len(file_content)} bytes")
+
+            uploaded_file.file.seek(0)
+
+
             structured_blocks = []
             bookmark_map = None
 
             with fitz.open(stream=file_content, filetype="pdf") as doc:
                 if doc.get_toc(simple=False):
-                    print(f"📄 Estrategia para '{uploaded_file.filename}': Marcadores (alta precisión).")
+                    print(f"📄 Estrategia para '{filename}': Marcadores (alta precisión).")
                     bookmark_map = devolver_marcadores(doc)
                     structured_blocks = extract_raw_blocks(doc)
                 else:
-                    print(f"📄 Estrategia para '{uploaded_file.filename}': Análisis de Layout (fallback).")
+                    print(f"📄 Estrategia para '{filename}': Análisis de Layout (fallback).")
                     structured_blocks = extract_blocks_by_layout(doc)
 
-            print(f"-> Se procesaron {len(structured_blocks)} bloques de '{uploaded_file.filename}'.")
-            
-            # Crear los chunks para este archivo y añadirlos a la lista total
-            file_chunks = create_langchain_chunks(structured_blocks, uploaded_file.filename, bookmark_map)
+            print(f"-> Se procesaron {len(structured_blocks)} bloques de '{filename}'.")
+
+            # Crear los chunks
+            file_chunks = create_langchain_chunks(structured_blocks, filename, bookmark_map)
+
+            # # ⛔ CANCELADO después del procesamiento (antes de subir)
+            # if canceled_uploads.get(filename):
+            #     print(f"🚫 Subida cancelada justo antes de enviar chunks de '{filename}'.")
+            #     canceled_uploads.pop(filename, None)
+            #     continue
+
             all_final_chunks.extend(file_chunks)
 
-        if not all_final_chunks:
-            return JSONResponse(content={"message": "No se pudo extraer contenido procesable de los archivos."}, status_code=400)
+            # ✅ Limpieza de bandera por si todo salió bien
+            canceled_uploads.pop(filename, None)
 
-        # Subir todos los chunks de todos los archivos a Qdrant de una sola vez
-        print(f"\nSubiendo un total de {len(all_final_chunks)} chunks a Qdrant...")
+        if not all_final_chunks:
+            return JSONResponse(content={"message": "No se pudo extraer contenido procesable de los archivos o todos fueron cancelados."}, status_code=400)
+
+        # Subida a Qdrant
+        print(f"\n📤 Subiendo un total de {len(all_final_chunks)} chunks a Qdrant...")
         crear_indice(collection_name=collection_name)
         
+
         global vector_store
+        if vector_store is None:
+            print("📌 Vector store no inicializado, creando uno nuevo...")
+            vector_store = crear_vectorstore(collection_name)
+        else:
+            print("📌 Vector store ya inicializado.")
+
         vector_store.add_documents(documents=all_final_chunks)
 
         return JSONResponse(
@@ -364,9 +398,19 @@ async def upload_pdfs(files: List[UploadFile] = File(...)):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error al procesar los archivos: {e}")
 
+def crear_vectorstore(collection_name: str):
+    return QdrantVectorStore(
+        client=QdrantClient(url=url, api_key=api_key),
+        collection_name=collection_name,
+        embedding=embeddings,
+        retrieval_mode=RetrievalMode.DENSE
+    )
+
 @app.delete("/delete")
 async def eliminar_pdf_qdrant(collection_name: str, pdf_nombre: str):
     print(f"📥 DELETE recibido para: {pdf_nombre} en colección: {collection_name}")
+
+    canceled_uploads[pdf_nombre] = True
 
     # Conexión con el cliente de Qdrant
     client = QdrantClient(

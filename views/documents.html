@@ -32,8 +32,10 @@
         <p>Manage and organize your enterprise documents</p>
       </div>
       <div class="controls">
-        <input type="text" class="search-input" placeholder="Search documents..." />
+
         <input type="file" id="pdfFiles" multiple accept="application/pdf" />
+        <label for="pdfFiles" class="upload-label">Seleccionar PDF(s)</label>
+        <div id="fileList" class="file-name"> "Aquí verás tus archivos a subir" </div>
         <button onclick="uploadPDFs()" class="upload-btn">Upload Documents</button>
 
       </div>
@@ -55,26 +57,36 @@
 
 
 <script>
+  // Al inicio del script
+  window.documentosSubidos = [];
+
+
   async function uploadPDFs() {
     const files = document.getElementById("pdfFiles").files;
     const documentGrid = document.querySelector(".document-grid");
 
-    // Limpiar el grid si quieres empezar desde cero:
-    // documentGrid.innerHTML = "";
-
     const formData = new FormData();
     const fileCards = [];
 
-    // Crear una card por archivo y agregar al FormData
+    // Crear una card por archivo, agregar al FormData y guardar en localStorage
     for (let file of files) {
       formData.append("files", file);
+
       const card = createDocCard(file.name, "processing");
       toggleNoDocsMessage(); // Ocultar mensaje si hay archivos
-      fileCards.push({ file, card });
-    }
-    fileCards.forEach(({ card }) => simulateProgress(card));
-    try {
 
+      fileCards.push({ file, card });
+
+      // Guardar en localStorage como en proceso
+      const tempDocs = JSON.parse(localStorage.getItem("docsEnProceso") || "[]");
+      tempDocs.push({ name: file.name, status: "processing" });
+      localStorage.setItem("docsEnProceso", JSON.stringify(tempDocs));
+    }
+
+    // Simular barra de progreso
+    fileCards.forEach(({ card }) => simulateProgress(card));
+
+    try {
       const res = await fetch("http://localhost:5000/upload", {
         method: "POST",
         body: formData
@@ -92,11 +104,23 @@
         ? await res.json()
         : { message: "Respuesta no válida" };
 
-      fileCards.forEach(({ card }) => {
+      fileCards.forEach(({ card, file }) => {
         completeProgressBar(card);
         updateCardStatus(card, "success");
-      });
 
+        // Eliminar del localStorage
+        let tempDocs = JSON.parse(localStorage.getItem("docsEnProceso") || "[]");
+
+        // Filtrar todos los archivos que ya se subieron
+        const nuevosDocsEnProceso = tempDocs.filter(doc => doc.name !== file.name);
+
+        // Actualizar localStorage sin los que ya están subidos
+        localStorage.setItem("docsEnProceso", JSON.stringify(nuevosDocsEnProceso));
+
+
+        // Agregar al listado subido en memoria (si usas esto en la sesión)
+        window.documentosSubidos.push({ name: file.name, status: "success" });
+      });
 
     } catch (err) {
       console.error("❌ Error al subir archivos:", err);
@@ -104,9 +128,9 @@
         completeProgressBar(card);
         updateCardStatus(card, "error");
       });
-
     }
   }
+
 
   function completeProgressBar(card) {
     const bar = card.querySelector(".progress-bar");
@@ -255,57 +279,49 @@
     });
   }
 
-  async function cargarDocumentosDesdeBackend() {
-    try {
-      const res = await fetch("http://localhost:5000/documentos_unicos/Knowledge-Navigator");
-      if (!res.ok) throw new Error("No se pudo obtener la lista de documentos");
-
-      const documentos = await res.json();
-      console.log("📄 Documentos cargados:", documentos);
-
-      if (documentos.length === 0) {
-        toggleNoDocsMessage();
-        return;
-      }
-
-      documentos.forEach((filename) => {
-        createDocCard(filename, "success");
-      });
-
-      toggleNoDocsMessage();
-    } catch (err) {
-      console.error("❌ Error al cargar documentos:", err);
-      alert("❌ No se pudieron cargar los documentos desde el sistema.");
-    }
-  }
-
-
-  // Cargar documentos automáticamente al iniciar la página
-  window.addEventListener("DOMContentLoaded", () => {
-    cargarDocumentosDesdeBackend();
-  });
+  let documentos = []
 
   localStorage.setItem("documentosSubidos", documentos.length > 0 ? "true" : "false");
 
+
+  function renderUploadedDocuments() {
+    const documentGrid = document.querySelector(".document-grid");
+    documentGrid.innerHTML = ""; // Limpia el grid
+
+    window.documentosSubidos.forEach(doc => {
+      const card = createDocCard(doc.name, doc.status);
+      documentGrid.appendChild(card);
+    });
+
+    toggleNoDocsMessage();
+  }
+
+
   async function cargarDocumentosDesdeBackend() {
     try {
+      const enProceso = JSON.parse(localStorage.getItem("docsEnProceso") || "[]");
+
+      // Carga los documentos en proceso
+      if (enProceso.length > 0) {
+        enProceso.forEach(doc => {
+          createDocCard(doc.name, doc.status);
+        });
+      }
+
+      // ➕ Elimina los que ya están marcados como "success" en el backend
       const res = await fetch("http://localhost:5000/documentos_unicos/Knowledge-Navigator");
       if (!res.ok) throw new Error("No se pudo obtener la lista de documentos");
 
       const documentos = await res.json();
       console.log("📄 Documentos cargados:", documentos);
 
-      // Guardar en localStorage el estado
-      localStorage.setItem("documentosSubidos", documentos.length > 0 ? "true" : "false");
+      window.documentosSubidos = documentos.map(name => ({ name, status: "success" }));
+      renderUploadedDocuments();
 
-      if (documentos.length === 0) {
-        toggleNoDocsMessage();
-        return;
-      }
+      // 🔁 Filtra el localStorage eliminando los que ya existen en el backend
+      const pendientes = enProceso.filter(doc => !documentos.includes(doc.name));
+      localStorage.setItem("docsEnProceso", JSON.stringify(pendientes));
 
-      documentos.forEach((filename) => {
-        createDocCard(filename, "success");
-      });
 
       toggleNoDocsMessage();
     } catch (err) {
@@ -313,6 +329,26 @@
       // alert("❌ No se pudieron cargar los documentos desde el sistema.");
     }
   }
+
+
+  const input = document.getElementById('pdfFiles');
+  const fileList = document.getElementById('fileList');
+
+  input.addEventListener('change', () => {
+    const files = Array.from(input.files);
+    if (files.length > 0) {
+      fileList.innerHTML = files.map(file => `• ${file.name}`).join('<br>');
+    } else {
+      fileList.innerHTML = '';
+    }
+  });
+
+
+
+  // Cargar documentos automáticamente al iniciar la página
+  window.addEventListener("DOMContentLoaded", () => {
+    cargarDocumentosDesdeBackend();
+  });
 
 </script>
 </body>

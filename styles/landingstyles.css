@@ -41,10 +41,12 @@ body {
   background-color: #d8e8ff;
   border-radius: 6px;
   color: #3b82f6;
+  
 }
 
 .chat-btn {
   margin-right: 50px;
+  transition: background-color 1s ease, transform 1s ease;
 }
 
 .chat-btn:hover {
@@ -54,10 +56,12 @@ body {
   background-color: #d8e8ff;
   border-radius: 6px;
   color: #3b82f6;
+  scale: 1.2;
 }
 
 .docs-btn {
   margin-right: 240px;
+  transition: background-color 1s ease, transform 1s ease;
 }
 
 .docs-btn:hover {
@@ -67,7 +71,7 @@ body {
   background-color: #d8e8ff;
   border-radius: 6px;
   color: #3b82f6;
-
+  scale: 1.2;
 }
 
 nav a {

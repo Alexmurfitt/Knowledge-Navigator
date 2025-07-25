@@ -27,6 +27,7 @@ body {
   padding: 20px;
   padding-right: 350px;
   background-color: #ffffff;
+  box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.3);
 }
 
 nav a {
@@ -47,18 +48,21 @@ nav a {
 
 .home-btn {
   margin-right: 60px;
+  transition: background-color 1s ease, transform 1s ease;
 }
 
 .home-btn:hover {
   margin-right: 50px;
-    padding: 10px;
+  padding: 10px;
   background-color: #d8e8ff;
   border-radius: 6px;
   color: #3b82f6;
+  scale: 1.2;
 }
 
 .chat-btn {
   margin-right: 40px;
+  transition: background-color 1s ease, transform 1s ease;
 }
 
 .chat-btn:hover {
@@ -68,6 +72,7 @@ nav a {
   background-color: #d8e8ff;
   border-radius: 6px;
   color: #3b82f6;
+  scale: 1.2;
 }
 
 .docs-btn {
@@ -128,13 +133,21 @@ body {
 }
 
 .upload-btn {
-  background-color: #6d28d9;
+  display: inline-block;
+  padding: 12px 24px;
+  background-color: #3b82f6;
   color: white;
-  padding: 10px 16px;
-  border: none;
+  font-size: 16px;
+  font-family: sans-serif;
   border-radius: 8px;
-  font-weight: 500;
   cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+
+.upload-btn:hover {
+  transform: scale(1.1);
+
 }
 
 .document-grid {
@@ -214,7 +227,7 @@ body {
 .actions {
   display: flex;
   justify-content: center;
-  gap:100px;
+  gap: 100px;
   border-top: 1px solid #e5e7eb;
   padding-top: 12px;
 }
@@ -258,9 +271,61 @@ button:hover i {
   margin-top: 8px;
   overflow: hidden;
 }
+
 .progress-bar {
   height: 100%;
   width: 0%;
   background-color: #007bff;
   transition: width 0.3s ease;
 }
+
+#pdfFiles {
+  display: none;
+}
+
+/* Botón personalizado */
+.upload-label {
+  display: inline-block;
+  padding: 12px 24px;
+  background-color: #3b82f6;
+  color: white;
+  font-size: 16px;
+  font-family: sans-serif;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+
+}
+
+.upload-label:hover {
+  transform: scale(1.1);
+}
+
+.upload-label:active {
+  transform: scale(0.97);
+}
+
+/* Estilo para mostrar archivos seleccionados (opcional) */
+.file-name {
+  margin-top: 10px;
+  font-family: sans-serif;
+  color: #001f85;
+  font-size: 14px;
+  padding: 50px;
+  background-color: rgb(255, 110, 110);
+}
+
+#fileList {
+  position: absolute;
+  top: 115px; /* ajusta según el layout */
+  right: 140px;
+  width: 250px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  padding: 10px;
+  z-index: 10;
+}
+
