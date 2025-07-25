@@ -1,96 +1,83 @@
-# ✅ Knowledge Navigator – Versión mejorada y ordenada
-
 import streamlit as st
-from langchain.memory import ConversationBufferMemory
-from langchain.schema import HumanMessage, AIMessage
-from dotenv import load_dotenv
-from ask_gemini import responder  # Ruta al backend limpio
 import unicodedata
-import os
-import sys
+from ask_gemini import consultar_gemini
 
-# 🔧 Configuración
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-load_dotenv()
+# --- 🔧 Configuración de la app ---
+st.set_page_config(page_title="Knowledge Navigator", page_icon="🧠", layout="centered")
 
-# --- 🔍 Limpieza de texto ---
+# --- 🧠 Encabezado ---
+st.title("🧠 Knowledge Navigator")
+st.caption("Consulta inteligente de documentos PDF vectorizados con IA. "
+           "Si no hay contexto local suficiente, se activa búsqueda web externa para garantizar una respuesta precisa.")
+
+# --- 🔍 Función auxiliar para limpieza de texto ---
 def limpiar_texto(texto):
+    """Limpia texto eliminando caracteres no imprimibles y normaliza errores de codificación, preservando formato básico."""
     try:
-        if texto is None:
+        if not texto:
             return ""
         if not isinstance(texto, str):
             texto = str(texto)
         texto = unicodedata.normalize("NFKD", texto)
         texto = texto.encode("utf-8", errors="replace").decode("utf-8", errors="replace")
-        texto = ''.join(c for c in texto if c.isprintable())
+        # Conservar caracteres imprimibles y espacios (incluyendo saltos de línea)
+        texto = ''.join(c for c in texto if c.isprintable() or c.isspace())
         return texto.strip()
     except Exception as e:
         return f"[❌ Error al limpiar texto: {str(e)}]"
 
-# --- 💬 Inicializar memoria de conversación ---
-if "memory" not in st.session_state:
-    st.session_state.memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-if "source_documents" not in st.session_state:
-    st.session_state.source_documents = []
-if "adicionales" not in st.session_state:
-    st.session_state.adicionales = []
-if "razonamiento" not in st.session_state:
-    st.session_state.razonamiento = ""
+# --- 💬 Entrada del usuario ---
+with st.form("formulario_pregunta"):
+    pregunta = st.text_input(
+        label="✏️ Haz tu pregunta:",
+        placeholder="Ej. ¿Qué es la transparencia algorítmica?",
+        key="input_pregunta"
+    )
+    submitted = st.form_submit_button("🔍 Consultar")
 
-# --- 🤖 Función principal de interacción ---
-def obtener_respuesta(pregunta_usuario: str):
-    try:
-        respuesta, fuentes, razonamiento, adicionales = responder(pregunta_usuario)
-        st.session_state.source_documents = fuentes
-        st.session_state.adicionales = adicionales
-        st.session_state.razonamiento = razonamiento
+# --- 🚀 Procesamiento y generación de respuesta ---
+if submitted and pregunta.strip():
+    with st.spinner("🧐 Procesando con IA..."):
+        try:
+            respuesta, razonamiento, fuentes, uso_web = consultar_gemini(pregunta.strip())
+        except Exception as e:
+            st.error(f"❌ Error al procesar la pregunta: {e}")
+            st.stop()
 
-        st.session_state.memory.save_context({"input": pregunta_usuario}, {"output": respuesta})
-        return respuesta
-    except Exception as e:
-        return f"❌ Error durante la generación de la respuesta: {str(e)}"
+    # ✅ Respuesta principal
+    st.markdown("## ✅ Respuesta clara y precisa")
+    if respuesta:
+        # Mostrar error como error, o respuesta normal como éxito
+        if respuesta.lower().startswith("error al generar respuesta"):
+            st.error(limpiar_texto(respuesta))
+        else:
+            st.success(limpiar_texto(respuesta))
+    else:
+        st.warning("⚠️ No se pudo generar una respuesta para esta pregunta.")
 
-# --- 🖥️ Interfaz visual ---
-st.title("Knowledge Navigator")
-st.caption("Sistema con recuperación documental y búsqueda externa enriquecida")
+    # 💡 Información adicional (si la respuesta NO es concisa)
+    if razonamiento and razonamiento.strip():
+        if not respuesta.endswith(".") or len(razonamiento.strip()) > 10:
+            st.markdown("## 💡 Información adicional")
+            with st.expander("🧠 Ver razonamiento ampliado (Chain of Thought)", expanded=True):
+                st.markdown(limpiar_texto(razonamiento))
 
-# Mostrar historial previo
-for msg in st.session_state.memory.chat_memory.messages:
-    rol = "user" if isinstance(msg, HumanMessage) else "assistant"
-    st.chat_message(rol).write(msg.content)
 
-# Entrada del usuario
-if prompt := st.chat_input("¿En qué puedo ayudarte hoy?"):
-    st.chat_message("user").write(prompt)
-    with st.spinner("Generando respuesta..."):
-        respuesta_texto = obtener_respuesta(prompt)
-
-    # ✅ 1. Mostrar la respuesta principal clara y precisa
-    st.chat_message("assistant").markdown("### ✅ Respuesta clara y precisa")
-    st.chat_message("assistant").write(respuesta_texto)
-
-    # 💡 2. Mostrar razonamiento ampliado (solo si existe)
-    if st.session_state.razonamiento.strip():
-        st.markdown("### 💡 Información adicional para enriquecer la respuesta")
-        with st.expander("🧠 Razonamiento ampliado (Chain of Thought)", expanded=True):
-            st.markdown(st.session_state.razonamiento)
-
-    # 📚 3. Mostrar fuentes consultadas
-    if st.session_state.source_documents:
-        st.markdown("### 📚 Fuentes de datos consultadas")
+    # 📚 Fuentes consultadas
+    st.markdown("## 📚 Fuentes consultadas")
+    if fuentes:
         with st.expander("🔍 Ver fuentes utilizadas"):
-            for doc in st.session_state.source_documents:
-                if isinstance(doc, str):
-                    st.info(limpiar_texto(doc))
-                else:
-                    nombre = limpiar_texto(doc.metadata.get("source", "desconocido"))
-                    pagina = limpiar_texto(str(doc.metadata.get("page", "N/A")))
-                    contenido = limpiar_texto(doc.page_content)
-                    st.info(f"📄 {nombre} (p. {pagina})\n\n{contenido}")
+            for i, fuente in enumerate(fuentes, start=1):
+                fuente_limpia = limpiar_texto(fuente)
+                st.markdown(f"- {fuente_limpia}")
+    else:
+        st.info("ℹ️ No se consultaron fuentes específicas para esta respuesta.")
 
-    # 🟠 4. Mostrar frases clave adicionales (si existen)
-    if st.session_state.adicionales:
-        st.markdown("### 🟠 Información adicional generada por el sistema")
-        with st.expander("🔸 Frases destacadas del razonador"):
-            for frase in st.session_state.adicionales:
-                st.markdown(f"- {frase}")
+    # 🌐 Aviso si se usó búsqueda externa
+    if uso_web:
+        st.markdown("---")
+        st.info("🌐 *Se utilizó búsqueda externa en internet porque no se encontró información suficiente en los documentos locales.*")
+
+# --- 📝 Pie de página ---
+st.markdown("---")
+st.caption("© 2025 Knowledge Navigator – Sistema de IA híbrida con recuperación semántica y razonamiento explicativo.")

@@ -1,54 +1,54 @@
-from langchain.prompts import PromptTemplate
-from langchain_core.runnables import RunnableSequence
-from langchain_ollama import ChatOllama
+# from langchain import RunnableSequence
 from langchain.chat_models import init_chat_model
-from dotenv import load_dotenv
-import os
-load_dotenv()
-google_api_key = os.getenv("GOOGLE_API_KEY")
-QDRANT_URL = os.getenv("QDRANT_URL")
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-MONGO_URI = os.getenv("MONGO_URI")
-MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")
-# 📌 Cargar modelo
-llm = init_chat_model(
-    "gemini-2.5-flash",
-    model_provider="google_genai",
-    api_key=google_api_key,
-    temperature=0.1
-)
+from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 
 
-# 🧠 Prompt de razonamiento paso a paso (Chain of Thought)
+def generar_respuesta(pregunta: str, contexto: str = "", temperatura: float = 0.2, modo_conciso: bool = False) -> str:
 
-prompt = PromptTemplate(
-    input_variables=["pregunta_usuario"],
-    template="""Actúa como un asistente profesional experto en análisis e interpretación de documentación empresarial. 
-Estás entrenado para ayudar a los usuarios no solo a obtener la información solicitada, sino también a comprenderla,
-proporcionando respuestas estructuradas, claras y pedagógicas. Tu respuesta debe contener las siguientes secciones:
+    """
+    Genera una respuesta a la pregunta dada, utilizando opcionalmente un contexto proporcionado,
+    formateando la salida en dos secciones: "Definición textual o normativa" y "Explicación ampliada".
+    Retorna el contenido generado por el modelo como una cadena de texto.
+    """
+    # Mensaje de sistema con instrucciones sobre el formato de la respuesta
+    if modo_conciso:
+        system_prompt = (
+        "Eres un asistente de IA que responde de forma breve, precisa y objetiva. "
+        "Responde **solo en español** y proporciona una sola frase clara con el dato exacto que responde a la pregunta, "
+        "sin explicaciones adicionales ni justificaciones. No uses encabezados ni subtítulos. "
+        "Ejemplo de formato: 'Hoy es viernes 25 de julio de 2025.'"
+        )
+    else:
+        system_prompt = (
+        "Eres un asistente de IA experto en definiciones normativas y conceptos técnicos. "
+        "Responde **solo en español** y sigue el formato indicado a continuación para tu respuesta:\n\n"
+        "Definición textual o normativa: <una definición concisa, citando normativa textual si es relevante>\n"
+        "Explicación ampliada: <una explicación detallada y pedagógica del concepto, aportando contexto adicional>\n\n"
+        "El tono debe ser profesional, claro y pedagógico."
+        )
 
-1. 📘 **Definición textual o normativa** (si aplica): Si se hace referencia a un fragmento o concepto específico, ofrece primero su definición exacta tal como aparece en los documentos.
+    # Mensaje del usuario, incluyendo el contexto si se proporciona
+    if contexto and contexto.strip():
+        human_prompt = "Contexto relevante:\n{contexto}\n\nPregunta: {pregunta}"
+        input_data = {"pregunta": pregunta, "contexto": contexto}
+    else:
+        human_prompt = "Pregunta: {pregunta}"
+        input_data = {"pregunta": pregunta}
 
-2. 🧠 **Explicación ampliada**: Interpreta y aclara el contenido en lenguaje accesible. Ayuda al usuario a comprender qué significa realmente, con precisión, rigor y claridad.
-
-3. 🔄 **Pregunta de seguimiento**: Formula una pregunta útil, coherente y contextualizada para continuar la conversación. Debe permitir profundizar, enlazar temas relacionados o comprobar la retención del historial.
-
-Tu objetivo es interactuar de forma natural y cercana, como lo haría un operador humano, manteniendo siempre un tono claro, respetuoso y experto.
-
----
-⚠️ Solo puedes generar una respuesta si el fragmento ha sido encontrado en los documentos.
-
-Pregunta inicial del usuario:
-{pregunta_usuario}
-"""
-)
-
-
-# 🔁 Crear secuencia moderna: prompt | modelo
-razonador_cot_chain = prompt | llm
-
-# 🚀 Función que invoca el razonador
-def razonamiento_cot(pregunta_usuario):
-    respuesta = razonador_cot_chain.invoke({"pregunta_usuario": pregunta_usuario})
-    print(f"esta es la respuesta de razonamiento_cot_limpio:{respuesta.content}")
-    return respuesta.content  # ← devolver solo el texto de la respuesta
+    try:
+        # Crear la plantilla de prompt de chat con mensajes de sistema y de usuario
+        prompt_template = ChatPromptTemplate.from_messages([
+            SystemMessagePromptTemplate.from_template(system_prompt),
+            HumanMessagePromptTemplate.from_template(human_prompt)
+        ])
+        # Inicializar el modelo de chat Gemini 2.5 Flash (Google GenAI) con la temperatura especificada
+        modelo = init_chat_model("gemini-2.5-flash", model_provider="google_genai", temperature=temperatura)
+        # Componer la secuencia de ejecución: prompt -> modelo
+        cadena = prompt_template | modelo
+        respuesta_modelo = cadena.invoke(input_data)
+        # Extraer el texto de la respuesta (puede ser str o objeto Message)
+        texto_respuesta = respuesta_modelo if isinstance(respuesta_modelo, str) else str(respuesta_modelo)
+        return texto_respuesta
+    except Exception as e:
+        # En caso de error durante la generación, devolver un mensaje de error descriptivo
+        return f"Error al generar respuesta con el modelo: {e}"

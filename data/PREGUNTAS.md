@@ -63,10 +63,12 @@ Estas preguntas están específicamente formuladas para:
 
 ### 📄 Documento 7: *IA y Transparencia Algorítmica – G. Vestri*
 
-16. **¿Qué elementos deben garantizarse para que un sistema de IA sea considerado transparente?**
-17. **¿Cómo se define la opacidad algorítmica en este documento y qué consecuencias conlleva?**
+16. **¿Qué ocurrió en el caso de Eric Loomis relacionado con el uso de algoritmos en decisiones judiciales?**
+17. **¿Por qué es controvertido el uso de algoritmos como COMPAS en decisiones judiciales, según el caso de Eric Loomis?**
 18. **¿Cuál es la definición de actuación automatizada según el artículo 41.1 de la Ley 40/2015?**
----
+¿Qué día es hoy en España?
+
+¿Cuáles son las últimas novedades sobre IA responsable?
 
 ## 📊 Siguientes pasos sugeridos
 

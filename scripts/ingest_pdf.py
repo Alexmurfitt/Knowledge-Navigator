@@ -15,7 +15,7 @@ from langchain_ollama import OllamaEmbeddings
 load_dotenv()
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-COLLECTION_NAME = "Knowledge-Navigator"
+COLLECTION_NAME = "knowledge-navigator"
 PDF_DIR = "data/pdfs"
 
 # 1. 📥 Cargar documentos PDF con metadatos por página
@@ -81,3 +81,4 @@ if __name__ == "__main__":
     chunks = dividir_en_fragmentos(documentos)
     # genembeddings = generar_embeddings()
     indexar_en_qdrant(chunks)
+    print(f"🎯 Colección '{COLLECTION_NAME}' creada y cargada con éxito en Qdrant Cloud.")
