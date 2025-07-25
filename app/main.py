@@ -26,6 +26,13 @@ from fastapi.responses import FileResponse
 from langchain.docstore.document import Document
 import fitz
 
+from fastapi import WebSocket
+from typing import Dict
+
+# Conexiones WebSocket activas por archivo
+active_connections: Dict[str, WebSocket] = {}
+
+
 load_dotenv()
 
 google_api_key=os.getenv("GOOGLE-API-KEY")
@@ -40,9 +47,6 @@ Sin_Informacion = "No tengo información sobre eso en mi base de datos"  #Puesto
 app = FastAPI()
 
 canceled_uploads = {}
-
-
-
 
 # CORS: Permitir conexiones desde tu HTML
 app.add_middleware(
@@ -385,7 +389,12 @@ async def upload_pdfs(files: List[UploadFile] = File(...)):
         else:
             print("📌 Vector store ya inicializado.")
 
-        vector_store.add_documents(documents=all_final_chunks)
+        total_chunks = len(all_final_chunks)
+        for i, chunk in enumerate(all_final_chunks):
+            vector_store.add_documents([chunk])
+            porcentaje = int(((i + 1) / total_chunks) * 100)
+            await enviar_progreso(chunk.metadata["document_name_id"], porcentaje)
+
 
         return JSONResponse(
             content={"message": f"{len(all_final_chunks)} fragmentos de {len(files)} archivo(s) cargados correctamente."},
@@ -478,3 +487,23 @@ async def mostrar_documentos_unicos(collection_name: str):
     except Exception as e:
         print(f"Ha ocurrido un error: {e}")
         return []
+
+
+@app.websocket("/ws/progreso")
+async def websocket_progreso(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        # Espera el nombre del archivo
+        filename = await websocket.receive_text()
+        print(f"📡 Cliente conectado esperando progreso para: {filename}")
+        active_connections[filename] = websocket
+    except Exception as e:
+        print(f"❌ WebSocket cerrado: {e}")
+
+async def enviar_progreso(filename: str, porcentaje: int):
+    ws = active_connections.get(filename)
+    if ws:
+        try:
+            await ws.send_json({"filename": filename, "progress": porcentaje})
+        except Exception as e:
+            print(f"Error al enviar progreso por WebSocket: {e}")

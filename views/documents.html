@@ -73,6 +73,7 @@
       formData.append("files", file);
 
       const card = createDocCard(file.name, "processing");
+      uploadFileWithProgress(file, card); // Subir archivo con barra de progreso
       toggleNoDocsMessage(); // Ocultar mensaje si hay archivos
 
       fileCards.push({ file, card });
@@ -252,25 +253,72 @@
     }
   }
 
+  // Guarda o actualiza el estado de un archivo en localStorage
+  function markUploadComplete(filename, status) {
+    let docsEnProceso = JSON.parse(localStorage.getItem("docsEnProceso") || "[]");
+
+    const index = docsEnProceso.findIndex(doc => doc.name === filename);
+    if (index !== -1) {
+      docsEnProceso[index].status = status;
+    } else {
+      docsEnProceso.push({ name: filename, status });
+    }
+
+    localStorage.setItem("docsEnProceso", JSON.stringify(docsEnProceso));
+  }
+
+  // Al cargar la página, cargar las tarjetas desde localStorage y actualizar estado
+  document.addEventListener("DOMContentLoaded", () => {
+    const docsEnProceso = JSON.parse(localStorage.getItem("docsEnProceso") || "[]");
+
+    if (docsEnProceso.length === 0) {
+      toggleNoDocsMessage();
+      return;
+    }
+
+    docsEnProceso.forEach(doc => {
+      const card = createDocCard(doc.name, doc.status);
+      updateCardStatus(card, doc.status);
+    });
+
+    toggleNoDocsMessage();
+  });
+
 
   function updateCardStatus(card, status) {
     const badge = card.querySelector(".badge");
-    if (!badge) return;
+    const progressBar = card.querySelector(".progress-bar");
 
-    const textMap = {
-      processing: "En proceso...",
-      success: "Subido",
-      error: "Error"
-    };
-    const classMap = {
+    const badgeClassMap = {
       processing: "processing",
       success: "ready",
       error: "error"
     };
 
-    badge.textContent = textMap[status];
-    badge.className = `badge ${classMap[status]}`;
+    const badgeTextMap = {
+      processing: "En proceso...",
+      success: "Subido",
+      error: "Error"
+    };
+
+    if (!badge || !progressBar) return;
+
+    badge.textContent = badgeTextMap[status];
+    badge.className = `badge ${badgeClassMap[status]}`;
+
+    if (status === "success") {
+      progressBar.style.width = "100%";
+    } else if (status === "processing") {
+      progressBar.style.width = "0%";
+    } else if (status === "error") {
+      progressBar.style.width = "0%";
+    }
+
+    // Actualizar estado en localStorage
+    const filename = card.querySelector(".doc-info h3").textContent;
+    markUploadComplete(filename, status);
   }
+
 
   function formatDateTime(date) {
     return date.toLocaleString("es-ES", {
@@ -343,12 +391,52 @@
     }
   });
 
+  function uploadFileWithProgress(file, card) {
+    const url = "http://localhost:5000/upload";
+
+    const formData = new FormData();
+    formData.append("files", file);
+
+    const xhr = new XMLHttpRequest();
+
+    const progressBar = card.querySelector(".progress-bar");
+
+    xhr.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable) {
+        const percent = Math.floor((event.loaded / event.total) * 90); // Llegar hasta 90%
+        progressBar.style.width = percent + "%";
+      }
+    });
+
+    xhr.onload = function () {
+      if (xhr.status === 200) {
+        completeProgressBar(card); // animar de 90% a 100%
+        updateCardStatus(card, "success");
+      } else {
+        updateCardStatus(card, "error");
+        console.error("Error al subir:", xhr.responseText);
+      }
+    };
+
+    xhr.onerror = function () {
+      updateCardStatus(card, "error");
+      console.error("❌ Error de red");
+    };
+
+    xhr.open("POST", url);
+    xhr.send(formData);
+
+    // Comienza con 0%
+    progressBar.style.width = "0%";
+  }
 
 
   // Cargar documentos automáticamente al iniciar la página
   window.addEventListener("DOMContentLoaded", () => {
     cargarDocumentosDesdeBackend();
   });
+
+
 
 </script>
 </body>
