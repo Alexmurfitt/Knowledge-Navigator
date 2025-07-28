@@ -19,38 +19,38 @@
       <a class="chat-btn" href="chat.html">Chat</a>
       <a class="docs-btn" href="documents.html">Documents</a>
 
-      <!-- Botones en tu navbar o donde quieras -->
-      <a href="#" id="openLogin">Sign In</a>
-      <a href="#" id="logoutBtn" style="display:none" onclick="cerrarSesion()">Logout</a>
-      <a href="#" id="openRegister" class="btn-primary">Get Started</a>
+<!-- Botones en tu navbar o donde quieras -->
+<a href="#" id="openLogin">Sign In</a>
+<a href="#" id="logoutBtn" style="display:none" onclick="cerrarSesion()">Logout</a>
+<a href="#" id="openRegister" class="btn-primary">Get Started</a>
 
-      <!-- Modal Login -->
-      <div id="loginModal" class="modal" style="display: none;">
-        <div class="modal-content">
-          <span class="close" id="closeLogin">&times;</span>
-          <h2>Iniciar Sesión</h2>
-          <form id="loginForm">
-            <input type="text" id="username" placeholder="Usuario" required><br>
-            <input type="password" id="password" placeholder="Contraseña" required><br>
-            <button type="submit">Entrar</button>
-            <p id="loginError" style="color: red; display: none;">Credenciales incorrectas</p>
-          </form>
-        </div>
-      </div>
+<!-- Modal Login -->
+<div id="loginModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span class="close" id="closeLogin">&times;</span>
+    <h2>Iniciar Sesión</h2>
+    <form id="loginForm">
+      <input type="text" id="username" placeholder="Usuario" required><br>
+      <input type="password" id="password" placeholder="Contraseña" required><br>
+      <button type="submit">Entrar</button>
+      <p id="loginError" style="color: red; display: none;">Credenciales incorrectas</p>
+    </form>
+  </div>
+</div>
 
-      <!-- Modal Registro -->
-      <div id="registroModal" class="modal" style="display: none;">
-        <div class="modal-content">
-          <span class="close" id="closeRegister">&times;</span>
-          <h2>Crear Cuenta</h2>
-          <form id="registroForm">
-            <input type="text" id="newUsername" placeholder="Nuevo usuario" required><br>
-            <input type="password" id="newPassword" placeholder="Contraseña" required><br>
-            <button type="submit">Registrarse</button>
-            <p id="registroError" style="color: red; display: none;">Nombre de usuario ya en uso</p>
-          </form>
-        </div>
-      </div>
+<!-- Modal Registro -->
+<div id="registroModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span class="close" id="closeRegister">&times;</span>
+    <h2>Crear Cuenta</h2>
+    <form id="registroForm">
+      <input type="text" id="newUsername" placeholder="Nuevo usuario" required><br>
+      <input type="password" id="newPassword" placeholder="Contraseña" required><br>
+      <button type="submit">Registrarse</button>
+      <p id="registroError" style="color: red; display: none;">Nombre de usuario ya en uso</p>
+    </form>
+  </div>
+</div>
 
 
     </nav>
@@ -180,108 +180,108 @@
   </div>
 </footer>
 <script>
-  // --- LOGIN ---
-  document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
+// --- LOGIN ---
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
 
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
-    const errorElem = document.getElementById('loginError');
-    errorElem.style.display = 'none';
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+  const errorElem = document.getElementById('loginError');
+  errorElem.style.display = 'none';
 
-    try {
-      const res = await fetch('/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
+  try {
+    const res = await fetch('/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username, password})
+    });
 
-      if (!res.ok) {
-        errorElem.textContent = 'Credenciales incorrectas';
-        errorElem.style.display = 'block';
-        return;
-      }
-
-      const data = await res.json();
-      alert(`Bienvenido ${data.username}`);
-
-      // Cerrar modal y limpiar inputs
-      document.getElementById('loginModal').style.display = 'none';
-      e.target.reset();
-
-      // Aquí puedes añadir lógica extra, ej: guardar token o cambiar UI
-
-    } catch (err) {
-      errorElem.textContent = 'Error de conexión';
+    if (!res.ok) {
+      errorElem.textContent = 'Credenciales incorrectas';
       errorElem.style.display = 'block';
+      return;
     }
-  });
 
+    const data = await res.json();
+    alert(`Bienvenido ${data.username}`);
 
-  // --- REGISTRO ---
-  document.getElementById('registroForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const username = document.getElementById('newUsername').value.trim();
-    const password = document.getElementById('newPassword').value.trim();
-    const errorElem = document.getElementById('registroError');
-    errorElem.style.display = 'none';
-
-    try {
-      const res = await fetch('/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-
-      if (!res.ok) {
-        errorElem.textContent = 'Nombre de usuario ya en uso';
-        errorElem.style.display = 'block';
-        return;
-      }
-
-      alert('Registro exitoso! Ahora puedes iniciar sesión.');
-
-      // Cerrar modal y limpiar inputs
-      document.getElementById('registroModal').style.display = 'none';
-      e.target.reset();
-
-    } catch (err) {
-      errorElem.textContent = 'Error de conexión';
-      errorElem.style.display = 'block';
-    }
-  });
-
-
-  // Abrir modales
-  document.getElementById('openLogin').onclick = function (e) {
-    e.preventDefault();
-    document.getElementById('loginModal').style.display = 'block';
-  }
-  document.getElementById('openRegister').onclick = function (e) {
-    e.preventDefault();
-    document.getElementById('registroModal').style.display = 'block';
-  }
-
-  // Cerrar modales con la X
-  document.getElementById('closeLogin').onclick = function () {
+    // Cerrar modal y limpiar inputs
     document.getElementById('loginModal').style.display = 'none';
-  }
-  document.getElementById('closeRegister').onclick = function () {
-    document.getElementById('registroModal').style.display = 'none';
-  }
+    e.target.reset();
 
-  // Cerrar modal clickeando fuera del contenido
-  window.onclick = function (event) {
-    const loginModal = document.getElementById('loginModal');
-    const registroModal = document.getElementById('registroModal');
-    if (event.target == loginModal) {
-      loginModal.style.display = 'none';
-    }
-    if (event.target == registroModal) {
-      registroModal.style.display = 'none';
-    }
+    // Aquí puedes añadir lógica extra, ej: guardar token o cambiar UI
+
+  } catch (err) {
+    errorElem.textContent = 'Error de conexión';
+    errorElem.style.display = 'block';
   }
+});
+
+
+// --- REGISTRO ---
+document.getElementById('registroForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const username = document.getElementById('newUsername').value.trim();
+  const password = document.getElementById('newPassword').value.trim();
+  const errorElem = document.getElementById('registroError');
+  errorElem.style.display = 'none';
+
+  try {
+    const res = await fetch('/register', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username, password})
+    });
+
+    if (!res.ok) {
+      errorElem.textContent = 'Nombre de usuario ya en uso';
+      errorElem.style.display = 'block';
+      return;
+    }
+
+    alert('Registro exitoso! Ahora puedes iniciar sesión.');
+
+    // Cerrar modal y limpiar inputs
+    document.getElementById('registroModal').style.display = 'none';
+    e.target.reset();
+
+  } catch (err) {
+    errorElem.textContent = 'Error de conexión';
+    errorElem.style.display = 'block';
+  }
+});
+
+
+// Abrir modales
+document.getElementById('openLogin').onclick = function(e) {
+  e.preventDefault();
+  document.getElementById('loginModal').style.display = 'block';
+}
+document.getElementById('openRegister').onclick = function(e) {
+  e.preventDefault();
+  document.getElementById('registroModal').style.display = 'block';
+}
+
+// Cerrar modales con la X
+document.getElementById('closeLogin').onclick = function() {
+  document.getElementById('loginModal').style.display = 'none';
+}
+document.getElementById('closeRegister').onclick = function() {
+  document.getElementById('registroModal').style.display = 'none';
+}
+
+// Cerrar modal clickeando fuera del contenido
+window.onclick = function(event) {
+  const loginModal = document.getElementById('loginModal');
+  const registroModal = document.getElementById('registroModal');
+  if (event.target == loginModal) {
+    loginModal.style.display = 'none';
+  }
+  if (event.target == registroModal) {
+    registroModal.style.display = 'none';
+  }
+}
 
 </script>
 
