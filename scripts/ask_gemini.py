@@ -1,254 +1,178 @@
+# =============================================================
+# 1. IMPORTACIONES Y CONFIGURACIÓN INICIAL
+# =============================================================
 import os
-import json
-import datetime
+import sys
+from datetime import datetime
 from dotenv import load_dotenv
+from qdrant_client import QdrantClient
+from langchain.chat_models import init_chat_model
+from langchain.prompts import ChatPromptTemplate
+from langchain_qdrant import QdrantVectorStore
+from langchain_ollama import OllamaEmbeddings
 
-# Cargar variables de entorno (API keys, URLs, etc.) una sola vez
-load_dotenv()
-
-# Importar modelo de incrustaciones de Ollama y Qdrant vector store
-try:
-    from langchain_ollama import OllamaEmbeddings
-except ImportError:
-    OllamaEmbeddings = None
-try:
-    from langchain.vectorstores import QdrantVectorStore
-except ImportError:
-    try:
-        from langchain_qdrant import QdrantVectorStore
-    except ImportError:
-        QdrantVectorStore = None
-
+# Módulos propios
 from razonador_cot import generar_respuesta
 from buscador_externo import buscar_web
-from langchain_core.runnables import RunnableLambda
-from langchain_core.prompts import ChatPromptTemplate
-from langchain.chat_models import init_chat_model
 
-# Clasificador semántico de intención (¿es una pregunta de actualidad o requiere concisión?)
-def clasificar_intencion(pregunta: str) -> tuple[bool, bool]:
-    """
-    Clasifica si la pregunta necesita búsqueda externa y si requiere una respuesta concisa.
-    Devuelve dos booleanos: (necesita_externo, respuesta_concisa)
-    """
-    prompt = ChatPromptTemplate.from_template("""
-Eres un clasificador semántico. Analiza la siguiente pregunta y responde en formato JSON.
+# Cargar variables de entorno
+load_dotenv()
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
-Tu tarea es determinar:
-- "necesita_externo": True si la pregunta requiere información actualizada o reciente que probablemente no esté en los documentos internos.
-- "respuesta_concisa": True si la respuesta ideal debe ser breve, precisa y directa, sin explicación larga.
-
-Ejemplos:
-
-Pregunta: "¿Cuáles son las últimas novedades sobre IA responsable?"
-Respuesta: {{ "{{\"necesita_externo\": true, \"respuesta_concisa\": false}}" }}
-
-Pregunta: "¿Qué avances recientes hay en la regulación de la IA en Europa?"
-Respuesta: {{ "{{\"necesita_externo\": true, \"respuesta_concisa\": false}}" }}
-
-Pregunta: "¿Qué día es hoy?"
-Respuesta: {{ "{{\"necesita_externo\": true, \"respuesta_concisa\": true}}" }}
-
-Pregunta: "¿Qué significa el principio de transparencia algorítmica?"
-Respuesta: {{ "{{\"necesita_externo\": false, \"respuesta_concisa\": false}}" }}
-
-Pregunta: "{pregunta}"
-
-Devuelve exactamente este formato:
-{{ "{{\"necesita_externo\": true/false, \"respuesta_concisa\": true/false}}" }}
-""")
-
-    chain = prompt | init_chat_model(
-        model="gemini-1.5-flash",
-        model_provider="google_genai",
-        temperature=0
-    ) | RunnableLambda(lambda msg: msg)
-
-    try:
-        resultado = chain.invoke({"pregunta": pregunta})
-        content = resultado.content.strip() if hasattr(resultado, "content") else str(resultado).strip()
-
-        if not content:
-            print("[⚠️ Clasificador vacío] El modelo no devolvió ningún contenido.")
-            return False, False
-
-        # ✅ LIMPIEZA ROBUSTA DEL BLOQUE JSON
-        if content.startswith("```json") and content.endswith("```"):
-            content = content.replace("```json", "").replace("```", "").strip()
-        elif content.startswith("```") and content.endswith("```"):
-            content = content.strip("`").strip()
-
-        # ✅ CARGA SEGURA DE JSON
-        parsed = json.loads(content)
-        print(f"[✔️ Clasificador] Resultado: {parsed}")
-        return parsed.get("necesita_externo", False), parsed.get("respuesta_concisa", False)
-
-    except json.JSONDecodeError as e:
-        print(f"[⚠️ JSON malformado] Error: {e}\nContenido recibido:\n{content}")
-        return False, False
-
-    except Exception as e:
-        print(f"[❌ Error inesperado en clasificar_intencion]: {e}")
-        return False, False
-
-
-# Instancias globales para reutilizar (evita recargas repetidas)
+# =============================================================
+# 2. INSTANCIAS GLOBALES
+# =============================================================
 _embeddings = None
 _vectorstore = None
+_modelo_evaluador = init_chat_model(model="gemini-2.5-flash", model_provider="google_genai", temperature=0)
 
+# =============================================================
+# 3. AGENTE EVALUADOR DE CONTEXTO LOCAL
+# =============================================================
+def evaluar_utilidad_contexto_llm(contexto: str, pregunta: str) -> bool:
+    """
+    Evalúa si el contexto recuperado de los documentos PDF es útil, suficiente y preciso
+    para responder correctamente a la pregunta sin necesidad de buscar en internet.
+    """
+    contexto_corto = contexto.strip()[:2000]  # limitar a 2000 caracteres
+
+    prompt = ChatPromptTemplate.from_template("""
+Eres un evaluador experto de calidad de información. Recibirás una *pregunta* y un *contexto extraído de documentos PDF vectorizados*.
+
+Debes determinar con máxima objetividad si ese contexto permite responder con:
+- Exactitud
+- Claridad
+- Fundamento verificable
+
+Pregunta:
+{pregunta}
+
+Contexto:
+{contexto}
+
+¿El contexto proporciona información suficientemente precisa y aplicable para responder la pregunta, sin necesidad de buscar más información?
+
+Responde SOLO con "Sí" o "No", sin explicaciones.
+""")
+
+    try:
+        chain = prompt | _modelo_evaluador
+        salida = chain.invoke({"pregunta": pregunta, "contexto": contexto_corto})
+        decision = salida.content.strip().lower()
+        print(f"🔍 Evaluador respondió: {decision}")
+        return decision.startswith("sí") or decision.startswith("yes")
+    except Exception as e:
+        print("⚠️ Error al evaluar contexto con LLM:", e)
+        return False
+
+# =============================================================
+# 4. CONSULTA INTELIGENTE CON GEMINI + QDRANT + BÚSQUEDA WEB
+# =============================================================
 def consultar_gemini(pregunta: str):
-    """
-    Procesa la pregunta utilizando la base de conocimiento local y/o búsqueda web,
-    y genera una respuesta formateada con la ayuda del modelo Gemini.
-    Retorna una tupla: (respuesta_principal, explicacion_adicional, fuentes, uso_busqueda_externa).
-    """
     global _embeddings, _vectorstore
 
-    # Inicializar modelo de embeddings Ollama si no está ya disponible
-    if OllamaEmbeddings is None:
-        raise ImportError("OllamaEmbeddings no está disponible. Instale el paquete 'langchain-ollama'.")
     if _embeddings is None:
-        _embeddings = OllamaEmbeddings(model="mxbai-embed-large:latest")
+        _embeddings = OllamaEmbeddings(model="mxbai-embed-large")
+    if _vectorstore is None:
+        client_qdrant = QdrantClient(url=os.getenv("QDRANT_URL"), api_key=os.getenv("QDRANT_API_KEY"))
+        _vectorstore = QdrantVectorStore(client=client_qdrant, collection_name="knowledge-navigator", embedding=_embeddings)
 
-    # Conectar (una vez) a Qdrant para buscar contexto relevante
-    if _vectorstore is None and QdrantVectorStore:
-        qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")
-        qdrant_api_key = os.getenv("QDRANT_API_KEY")
-        try:
-            _vectorstore = QdrantVectorStore.from_existing_collection(
-                embedding=_embeddings,
-                collection_name="knowledge-navigator",
-                url=qdrant_url,
-                api_key=qdrant_api_key if qdrant_api_key else None
-            )
-        except Exception:
-            _vectorstore = None  # Si falla (p.ej. colección no existente), no usar vectorstore
-
-    # Recuperar documentos similares si la base de conocimiento está disponible
+    # 1. Recuperar contexto desde Qdrant
     documentos = []
-    if _vectorstore is not None:
-        try:
-            resultados_con_score = _vectorstore.similarity_search_with_relevance_scores(pregunta, k=5)
-            documentos_filtrados = [
-                doc for doc, score in resultados_con_score if score is not None and score >= 0.8
-            ]
-            documentos = documentos_filtrados
-        except Exception:
-            documentos = []
-        # Determinar si se requiere búsqueda externa (consultas de actualidad/novedades)
-    # Clasificación semántica real de la intención
-    necesita_externo, respuesta_concisa = clasificar_intencion(pregunta)
-
-    # Determinar la fuente de contexto a usar
-    used_external = False
-    contexto_texto = ""
-    first_title = first_link = ""
-    if documentos and len(documentos) > 0:
-        # Combinar contenido de documentos internos relevantes
-        contexto_texto = "\n\n".join([doc.page_content for doc in documentos if doc.page_content])
-        used_external = False
-    else:
-        # Realizar búsqueda web externa si falta contexto interno o es consulta de actualidad
-        used_external = True
-        resultado_busqueda = buscar_web(pregunta, k=5)
-        if isinstance(resultado_busqueda, str):
-            contexto_texto = ""  # error o wrapper no disponible
-        else:
-            snippets, first_title, first_link = resultado_busqueda
-            contexto_texto = "\n\n".join(snippets) if snippets else ""
-
-    # Invocar el modelo Gemini (razonador_cot) con la pregunta y el contexto recopilado
-    respuesta_completa = generar_respuesta(pregunta, contexto_texto, modo_conciso=respuesta_concisa)
-    if respuesta_completa is None:
-        respuesta_completa = ""
-    # Limpiar la respuesta eliminando caracteres no imprimibles
-    respuesta_completa = "".join(ch for ch in respuesta_completa if ch.isprintable() or ch.isspace())
-    respuesta_completa = respuesta_completa.encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
-
-    # Separar la respuesta en las dos secciones esperadas (Definición y Explicación)
-    respuesta_principal = respuesta_completa.strip()
-    explicacion_adicional = ""
-
-    if not respuesta_concisa and "Explicación ampliada:" in respuesta_completa:
-        try:
-            partes = respuesta_completa.split("Explicación ampliada:")
-            definicion_part = partes[0].strip()
-            explicacion_part = partes[1].strip()
-            if definicion_part.lower().startswith("definición textual"):
-                definicion_content = definicion_part.split(":", 1)[1].strip() if ":" in definicion_part else definicion_part
-            else:
-                definicion_content = definicion_part
-            respuesta_principal = definicion_content
-            explicacion_adicional = explicacion_part
-        except Exception as e:
-            print(f"[⚠️ Error al descomponer respuesta estructurada]: {e}")
-            respuesta_principal = respuesta_completa.strip()
-            explicacion_adicional = ""
-    else:
-        respuesta_principal = respuesta_completa.strip()
-        explicacion_adicional = ""
-
-    # Preparar la lista de fuentes consultadas para registro y salida
-    fuentes = []
-    if used_external:
-        # Se utilizó búsqueda externa
-        if first_title or first_link:
-            fuente_str = first_title if first_title else "Fuente externa"
-            if first_link:
-                fuente_str += f" ({first_link})"
-            fuentes.append(fuente_str)
-        else:
-            fuentes.append("Búsqueda web realizada (sin resultados específicos)")
-    else:
-        # Solo se usó la base de conocimiento interna
-        
-        for doc in documentos:
-            fuente = doc.metadata.get("source", "Documento desconocido")
-            pagina = doc.metadata.get("page", "¿?")
-            score = f"{getattr(doc, 'score', 0):.4f}" if hasattr(doc, 'score') else "N/A"
-            fuentes.append(f"📁 {fuente} | 📄 Página {pagina} | 🔢 Score: {score}")
-
-    # Guardar trazabilidad en historial.json (registro de la pregunta y respuesta)
-    registro = {
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "pregunta": pregunta,
-        "respuesta": respuesta_principal,
-        "razonamiento": explicacion_adicional,
-        "fuentes": fuentes
-    }
     try:
-        historial = []
-        if os.path.exists("historial.json"):
-            with open("historial.json", "r", encoding="utf-8") as f:
-                historial = json.load(f)
-            if not isinstance(historial, list):
-                historial = []
-        historial.append(registro)
-        with open("historial.json", "w", encoding="utf-8") as f:
-            json.dump(historial, f, ensure_ascii=False, indent=2)
+        resultados = _vectorstore.similarity_search_with_relevance_scores(pregunta, k=5)
+        resultados.sort(key=lambda x: x[1] or 0, reverse=True)
+        for doc, score in resultados:
+            if doc.page_content:
+                documentos.append(doc)
     except Exception as e:
-        print(f"[Advertencia] No se pudo guardar historial: {e}")
+        print(f"❌ Error en búsqueda local: {e}")
+        documentos = []
 
-    return respuesta_principal, explicacion_adicional, fuentes, used_external
+    contexto_local = "\n\n".join(doc.page_content for doc in documentos) if documentos else ""
+    usar_contexto_local = False
+    usar_buscador_externo = False
+    contexto_final = ""
+    fuentes = []
 
-# Punto de entrada para uso interactivo por consola
+    # 2. Evaluar utilidad del contexto local
+    if contexto_local.strip():
+        utilidad = evaluar_utilidad_contexto_llm(contexto_local, pregunta)
+        if utilidad:
+            contexto_final = contexto_local
+            usar_contexto_local = True
+        else:
+            usar_buscador_externo = True
+    else:
+        usar_buscador_externo = True
+
+    # 3. Buscar en la web si es necesario
+    if usar_buscador_externo:
+        resultados_web = buscar_web(pregunta, k=5)
+        if isinstance(resultados_web, tuple):
+            snippets, titulo, link = resultados_web
+            contexto_final = "\n\n".join(snippets) if isinstance(snippets, list) else ""
+            if titulo or link:
+                fuentes.append(f"{titulo} ({link})")
+            else:
+                fuentes.append("Búsqueda web realizada (sin resultados específicos)")
+        else:
+            print(f"⚠️ Error en búsqueda web: {resultados_web}")
+            contexto_final = ""
+
+    # 4. Verificación final del contexto
+    if not contexto_final.strip():
+        return (
+            "No se ha encontrado información suficientemente precisa para responder a esta pregunta.",
+            "",
+            ["Sin fuentes disponibles"],
+            usar_buscador_externo
+        )
+
+    # 5. Generar respuesta con razonador CoT
+    respuesta_completa = generar_respuesta(pregunta, contexto_final) or ""
+    respuesta_completa = "".join(c for c in respuesta_completa if c.isprintable() or c.isspace())
+    respuesta_completa = respuesta_completa.encode("utf-8", errors="ignore").decode("utf-8", errors="ignore")
+
+    # 6. Separar respuesta y razonamiento
+    respuesta_principal = respuesta_completa.strip()
+    razonamiento = ""
+    if "Explicación ampliada:" in respuesta_completa:
+        partes = respuesta_completa.split("Explicación ampliada:")
+        respuesta_principal = partes[0].split(":", 1)[1].strip() if "definición textual" in partes[0].lower() else partes[0].strip()
+        razonamiento = partes[1].strip()
+
+    # 7. Fuentes locales si no hubo búsqueda web
+    if not usar_buscador_externo:
+        for doc in documentos:
+            fuente = doc.metadata.get("source", "Documento local")
+            pag = doc.metadata.get("page", "?")
+            fuentes.append(f'Documento: "{fuente}" – Página {pag}')
+
+    return respuesta_principal, razonamiento, fuentes, usar_buscador_externo
+
+# =============================================================
+# 5. PUNTO DE ENTRADA CLI
+# =============================================================
 if __name__ == "__main__":
-    import sys
-    if len(sys.argv) > 1:
-        pregunta_usuario = " ".join(sys.argv[1:])
+    pregunta = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else input("Ingrese su pregunta: ")
+
+    respuesta, razonamiento, fuentes, uso_externo = consultar_gemini(pregunta)
+
+    print("\n📘 Respuesta:")
+    print(respuesta or "(No se obtuvo respuesta)")
+
+    print("\n💡 Información adicional:")
+    print(razonamiento or "(No se proporcionó explicación adicional)")
+
+    print("\n📚 Fuentes consultadas:")
+    for fuente in fuentes:
+        print(f"- {fuente}")
+
+    print("\n🔍 Nota:", end=" ")
+    if uso_externo and fuentes and any(f.startswith("Documento") for f in fuentes):
+        print("Se utilizó información combinada: documentos PDF + búsqueda web.")
+    elif uso_externo:
+        print("Se utilizó búsqueda web externa para complementar la respuesta.")
     else:
-        pregunta_usuario = input("Ingrese su pregunta: ")
-    resp_principal, resp_expanded, fuentes_consultadas, uso_externo = consultar_gemini(pregunta_usuario)
-    # Mostrar resultados en consola
-    print("\nRespuesta principal:")
-    print(resp_principal if resp_principal else "(No se obtuvo respuesta)")
-    print("\nInformación adicional (razonamiento):")
-    print(resp_expanded if resp_expanded else "(No se proporcionó explicación adicional)")
-    print("\nFuentes consultadas:")
-    if fuentes_consultadas:
-        for fuente in fuentes_consultadas:
-            print(f"- {fuente}")
-    else:
-        print("(No se consultaron fuentes)")
-    if uso_externo:
-        print("\n*Nota:* Se utilizó búsqueda web externa para complementar la respuesta.")
+        print("Se respondió exclusivamente con información de los documentos PDF.")

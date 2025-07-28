@@ -53,10 +53,20 @@ def dividir_en_fragmentos(documentos):
         chunk_overlap=200,
         separators=["\n\n", "\n", ".", " "]
     )
-    chunks = splitter.split_documents(documentos)
-    print(f"✅ Fragmentos generados: {len(chunks)}")
-    return chunks
+    todos_los_chunks = splitter.split_documents(documentos)
+    chunks_utiles = [c for c in todos_los_chunks if es_fragmento_util(c.page_content)]
+    print(f"✅ Fragmentos generados: {len(chunks_utiles)} (de {len(todos_los_chunks)} totales)")
+    return chunks_utiles
 
+# 🔎 Filtro para eliminar fragmentos irrelevantes o genéricos
+def es_fragmento_util(texto: str) -> bool:
+    texto = texto.strip().lower()
+    return (
+        len(texto) >= 300 and
+        not texto.startswith("índice") and
+        "copyright" not in texto and
+        not texto.isdigit()
+    )
 
 # 3. 📡 Conectar con Qdrant y almacenar los fragmentos
 def indexar_en_qdrant(chunks):
