@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
+
 <body>
   <header class="navbar">
     <div class="logo">Knowledge Navigator</div>
@@ -18,8 +19,40 @@
       <a class="chat-btn" href="chat.html">Chat</a>
       <a class="docs-btn" href="documents.html">Documents</a>
 
-      <a href="#">Sign In</a>
-      <a href="#" class="btn-primary">Get Started</a>
+      <!-- Botones en tu navbar o donde quieras -->
+      <a href="#" id="openLogin">Sign In</a>
+      <a href="#" id="logoutBtn" style="display:none" onclick="cerrarSesion()">Logout</a>
+      <a href="#" id="openRegister" class="btn-primary">Get Started</a>
+
+      <!-- Modal Login -->
+      <div id="loginModal" class="modal" style="display: none;">
+        <div class="modal-content">
+          <span class="close" id="closeLogin">&times;</span>
+          <h2>Iniciar Sesión</h2>
+          <form id="loginForm">
+            <input type="text" id="username" placeholder="Usuario" required><br>
+            <input type="password" id="password" placeholder="Contraseña" required><br>
+            <button type="submit">Entrar</button>
+            <p id="loginError" style="color: red; display: none;">Credenciales incorrectas</p>
+          </form>
+        </div>
+      </div>
+
+      <!-- Modal Registro -->
+      <div id="registroModal" class="modal" style="display: none;">
+        <div class="modal-content">
+          <span class="close" id="closeRegister">&times;</span>
+          <h2>Crear Cuenta</h2>
+          <form id="registroForm">
+            <input type="text" id="newUsername" placeholder="Nuevo usuario" required><br>
+            <input type="password" id="newPassword" placeholder="Contraseña" required><br>
+            <button type="submit">Registrarse</button>
+            <p id="registroError" style="color: red; display: none;">Nombre de usuario ya en uso</p>
+          </form>
+        </div>
+      </div>
+
+
     </nav>
   </header>
 
@@ -32,15 +65,15 @@
     <a href="chat.html" class="startchatting-btn">Start Chatting</a>
     <div class="stats">
       <div class="card">
-        <div>👥</div>500+
-        <p>Enterprise Clients</p>
+        <div><img src="../styles/images/clients.png" alt="Documento" class="clients-image"></div>50+
+        <p>Enterprise Clients Expected</p>
       </div>
       <div class="card">
-        <div>🛡️</div>99.9%
+        <div><img src="../styles/images/shield.png" alt="Documento" class="shield-image"></div>99.9%
         <p>Security Uptime</p>
       </div>
       <div class="card">
-        <div>⚡</div>3s
+        <div><img src="../styles/images/rayo.png" alt="Documento" class="clients-image"></div>3-6s
         <p>Average Response</p>
       </div>
     </div>
@@ -53,37 +86,42 @@
 
     <div class="features-grid">
       <div class="feature-card">
-        <div class="icon-box upload-icon">⬆️</div>
+        <div class="icon-box upload-icon"><img src="../styles/images/subida.webp" alt="Documento" class="chat-image">
+        </div>
         <h3>Easy Document Upload</h3>
         <p>Drag and drop PDFs directly into the system. Support for multiple file formats and batch uploads.</p>
       </div>
 
       <div class="feature-card">
-        <div class="icon-box chat-icon">💬</div>
+        <div class="icon-box chat-icon"><img src="../styles/images/chat.webp" alt="Documento" class="chat-image"></div>
         <h3>Intelligent Chat</h3>
         <p>Ask questions in natural language and get precise answers from your documents instantly.</p>
       </div>
 
       <div class="feature-card">
-        <div class="icon-box shield-icon">🛡️</div>
+        <div class="icon-box shield-icon"><img src="../styles/images/shield.png" alt="Documento" class="chat-image">
+        </div>
         <h3>Enterprise Security</h3>
         <p>Bank-level encryption, compliance with SOC 2, GDPR, and complete data privacy protection.</p>
       </div>
 
       <div class="feature-card">
-        <div class="icon-box search-icon">🔍</div>
+        <div class="icon-box search-icon"><img src="../styles/images/lupa.webp" alt="Documento" class="chat-image">
+        </div>
         <h3>Advanced Search</h3>
         <p>Powerful search across all documents with context-aware results and semantic understanding.</p>
       </div>
 
       <div class="feature-card">
-        <div class="icon-box team-icon">👥</div>
+        <div class="icon-box team-icon"><img src="../styles/images/clients.png" alt="Documento" class="chat-image">
+        </div>
         <h3>Team Collaboration</h3>
         <p>Share documents and insights across teams with role-based access control and permissions.</p>
       </div>
 
       <div class="feature-card">
-        <div class="icon-box lightning-icon">⚡</div>
+        <div class="icon-box lightning-icon"><img src="../styles/images/rayo.png" alt="Documento" class="chat-image">
+        </div>
         <h3>Real-time Processing</h3>
         <p>Lightning-fast document processing and instant responses powered by advanced AI models.</p>
       </div>
@@ -98,47 +136,153 @@
   </section>
 
 </body>
-  <footer>
-    <div class="footer-content">
+<footer>
+  <div class="footer-content">
 
 
-      <div class="footer-column">
-        <h4>Product</h4>
-        <ul>
-          <li><a href="#">Features</a></li>
-          <li><a href="#">Pricing</a></li>
-          <li><a href="#">Security</a></li>
-          <li><a href="#">API</a></li>
-        </ul>
-      </div>
-
-      <div class="footer-column">
-        <h4>Resources</h4>
-        <ul>
-          <li><a href="#">Documentation</a></li>
-          <li><a href="#">Help Center</a></li>
-          <li><a href="#">Blog</a></li>
-          <li><a href="#">Case Studies</a></li>
-        </ul>
-      </div>
-
-      <div class="footer-column">
-        <h4>Contact</h4>
-        <ul>
-          <li> Knowledgenavigator@gmail.com</li>
-          <li>📞 +1 (555) 123-4567</li>
-          <li>📍 San Francisco, CA</li>
-        </ul>
-      </div>
+    <div class="footer-column">
+      <h4>Product</h4>
+      <ul>
+        <li><a href="#">Features</a></li>
+        <li><a href="#">Pricing</a></li>
+        <li><a href="#">Security</a></li>
+        <li><a href="#">API</a></li>
+      </ul>
     </div>
 
-    <div class="footer-bottom">
-      <p>&copy; 2024 DocuChat Enterprise. All rights reserved.</p>
-      <div class="legal-links">
-        <a href="#">Privacy Policy</a>
-        <a href="#">Terms of Service</a>
-        <a href="#">Cookie Policy</a>
-      </div>
+    <div class="footer-column">
+      <h4>Resources</h4>
+      <ul>
+        <li><a href="#">Documentation</a></li>
+        <li><a href="#">Help Center</a></li>
+        <li><a href="#">Blog</a></li>
+        <li><a href="#">Case Studies</a></li>
+      </ul>
     </div>
-  </footer>
+
+    <div class="footer-column">
+      <h4>Contact</h4>
+      <ul>
+        <li> Knowledgenavigator@gmail.com</li>
+        <li>📞 +34 636 12 54 67</li>
+        <li>📍 Las Palmas de Gran Canaria</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <p>&copy; 2025 Knowledge Navigator Enterprise. All rights reserved.</p>
+    <div class="legal-links">
+      <a href="#">Privacy Policy</a>
+      <a href="#">Terms of Service</a>
+      <a href="#">Cookie Policy</a>
+    </div>
+  </div>
+</footer>
+<script>
+  // --- LOGIN ---
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const errorElem = document.getElementById('loginError');
+    errorElem.style.display = 'none';
+
+    try {
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (!res.ok) {
+        errorElem.textContent = 'Credenciales incorrectas';
+        errorElem.style.display = 'block';
+        return;
+      }
+
+      const data = await res.json();
+      alert(`Bienvenido ${data.username}`);
+
+      // Cerrar modal y limpiar inputs
+      document.getElementById('loginModal').style.display = 'none';
+      e.target.reset();
+
+      // Aquí puedes añadir lógica extra, ej: guardar token o cambiar UI
+
+    } catch (err) {
+      errorElem.textContent = 'Error de conexión';
+      errorElem.style.display = 'block';
+    }
+  });
+
+
+  // --- REGISTRO ---
+  document.getElementById('registroForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const username = document.getElementById('newUsername').value.trim();
+    const password = document.getElementById('newPassword').value.trim();
+    const errorElem = document.getElementById('registroError');
+    errorElem.style.display = 'none';
+
+    try {
+      const res = await fetch('/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (!res.ok) {
+        errorElem.textContent = 'Nombre de usuario ya en uso';
+        errorElem.style.display = 'block';
+        return;
+      }
+
+      alert('Registro exitoso! Ahora puedes iniciar sesión.');
+
+      // Cerrar modal y limpiar inputs
+      document.getElementById('registroModal').style.display = 'none';
+      e.target.reset();
+
+    } catch (err) {
+      errorElem.textContent = 'Error de conexión';
+      errorElem.style.display = 'block';
+    }
+  });
+
+
+  // Abrir modales
+  document.getElementById('openLogin').onclick = function (e) {
+    e.preventDefault();
+    document.getElementById('loginModal').style.display = 'block';
+  }
+  document.getElementById('openRegister').onclick = function (e) {
+    e.preventDefault();
+    document.getElementById('registroModal').style.display = 'block';
+  }
+
+  // Cerrar modales con la X
+  document.getElementById('closeLogin').onclick = function () {
+    document.getElementById('loginModal').style.display = 'none';
+  }
+  document.getElementById('closeRegister').onclick = function () {
+    document.getElementById('registroModal').style.display = 'none';
+  }
+
+  // Cerrar modal clickeando fuera del contenido
+  window.onclick = function (event) {
+    const loginModal = document.getElementById('loginModal');
+    const registroModal = document.getElementById('registroModal');
+    if (event.target == loginModal) {
+      loginModal.style.display = 'none';
+    }
+    if (event.target == registroModal) {
+      registroModal.style.display = 'none';
+    }
+  }
+
+</script>
+
 </html>

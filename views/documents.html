@@ -21,7 +21,9 @@
       <a class="chat-btn" href="chat.html">Chat</a>
       <a class="docs-btn" href="documents.html">Documents</a>
       <a href="#">Sign In</a>
-      <a href="#" class="btn-primary">Get Started</a>
+      <a href="#" id="logoutBtn" style="display:none" onclick="cerrarSesion()">Logout</a>
+
+      <a href="#" class="btn-primary" onclick="abrirRegistro()">Sign Up</a>
     </nav>
   </header>
 
@@ -192,16 +194,14 @@
 
     card.innerHTML = `
       <div class="doc-header">
-        <div class="doc-icon">📄</div>
+        <div class="doc-icon"><img src="../styles/images/pdf.png" alt="Documento" class="doc-image"></div>
         <div class="doc-info">
           <h3>${filename}</h3>
           <span class="badge ${badgeClassMap[status]}">${badgeTextMap[status]}</span>
         </div>
       </div>
       <p class="doc-meta">Subido el ${formattedDate}</p>
-      <div class="tags">
-        <span class="tag">PDF</span>
-      </div>
+
       <div class="progress-bar-container">
         <div class="progress-bar" style="width: 0%;"></div>
       </div>

@@ -127,7 +127,7 @@ nav a.btn {
 }
 
 .card {
-  background-color: #f9fafb;
+  background-color: #ffffff;
   padding: 30px 40px;
   border-radius: 12px;
   text-align: center;
@@ -231,35 +231,7 @@ nav a.btn {
   font-weight: bold;
 }
 
-.upload-icon {
-  background-color: #e0e7ff;
-  color: #6366f1;
-}
 
-.chat-icon {
-  background-color: #dcfce7;
-  color: #22c55e;
-}
-
-.shield-icon {
-  background-color: #fee2e2;
-  color: #ef4444;
-}
-
-.search-icon {
-  background-color: #f3e8ff;
-  color: #a855f7;
-}
-
-.team-icon {
-  background-color: #fef9c3;
-  color: #eab308;
-}
-
-.lightning-icon {
-  background-color: #ede9fe;
-  color: #8b5cf6;
-}
 
 .feature-card h3 {
   font-size: 1.1rem;
@@ -374,4 +346,43 @@ footer {
 }
 .legal-links a:hover {
   color: white;
+}
+
+.clients-image{
+  width: 50px;
+  height: 50px;
+  margin-right: 10px;
+  vertical-align: middle;
+  
+}
+
+.shield-image{
+  width: 80px;
+  height: 48px;
+  margin-right: 10px;
+  vertical-align: middle;
+  
+}
+
+.chat-image{
+  width: 60px;
+  height: 40px;
+  margin-right: 10px;
+  vertical-align: middle;
+  
+}
+
+.modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  min-width: 300px;
 }

@@ -211,7 +211,7 @@ def split_chunks(docs):
 
 def is_simple_question(question: str) -> bool:
     question = question.lower()
-    keywords = ["quién", "qué", "cuándo", "dónde", "cuánto", "cómo"]
+    keywords = ["quién", "qué", "cuándo", "dónde", "cuánto", "cómo", "hola"]
     exclusion_terms = ["documento", "pdf", "archivo", "tabla", "contenido"]
     return (
         len(question.split()) < 8 and
@@ -285,7 +285,7 @@ async def ask_bot(req: ChatRequest):
         "answer": final_response,
         "suggested_question": suggested_question,
         "sources": final_sources,
-        "source_type": source_type
+        # "source_type": source_type
     }
 
 @app.get("/chat-history")
@@ -507,3 +507,41 @@ async def enviar_progreso(filename: str, porcentaje: int):
             await ws.send_json({"filename": filename, "progress": porcentaje})
         except Exception as e:
             print(f"Error al enviar progreso por WebSocket: {e}")
+
+
+
+from app.auth_utils import authenticate_user, register_user
+from passlib.context import CryptContext
+
+class LoginData(BaseModel):
+    username: str
+    password: str
+
+# Seguridad
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+fake_users_db = {
+    "aaron": {
+        "username": "aaron",
+        "hashed_password": pwd_context.hash("admin123"),
+    }
+}
+
+@app.post("/login")
+async def login(data: LoginData):
+    if authenticate_user(data.username, data.password):
+        return JSONResponse({"success": True, "message": f"Bienvenido {data.username}"})
+    return JSONResponse({"success": False, "message": "Usuario o contraseña incorrectos"})
+
+@app.post("/register")
+async def register(data: LoginData):
+    if register_user(data.username, data.password):
+        return JSONResponse({"success": True, "message": "Usuario registrado correctamente"})
+    else:
+        return JSONResponse({"success": False, "message": "El usuario ya existe"})
+    
+def user_exists(username: str):
+    return username in fake_users_db
+
+def add_user(username: str, password: str):
+    fake_users_db[username] = password    

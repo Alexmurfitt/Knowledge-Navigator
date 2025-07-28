@@ -156,7 +156,7 @@ body {
   gap: 20px;
 }
 
-.doc-card {
+/* .doc-card {
   background-color: white;
   padding: 20px;
   border-radius: 12px;
@@ -165,7 +165,84 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+}  */
+
+
+@property --angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
 }
+
+@keyframes spin {
+  from {
+    --angle: 0deg;
+  }
+  to {
+    --angle: 360deg;
+  }
+}
+
+.doc-card {
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: box-shadow 0.3s ease;
+  position: relative;
+  border: none;
+}
+
+.doc-card::before {
+  content: '';
+  position: absolute;
+  top: 0; 
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: conic-gradient(
+    from var(--angle), 
+    red, 
+    blue, 
+    red
+  );
+  animation: spin 4s linear infinite;
+  border-radius: inherit;
+  z-index: 0;
+}
+
+.doc-card::after {
+  content: '';
+  position: absolute;
+  inset: 2px; 
+  background: #fff;
+  border-radius: 6px;
+  z-index: 0;
+}
+
+.doc-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 .doc-header {
   display: flex;
@@ -179,6 +256,7 @@ body {
 
 .doc-info {
   flex: 1;
+  margin-top: -30px;
 }
 
 .doc-info h3 {
@@ -329,3 +407,8 @@ button:hover i {
   z-index: 10;
 }
 
+.doc-image {
+  height: 50px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
