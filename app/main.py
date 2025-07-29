@@ -223,6 +223,8 @@ class ChatRequest(BaseModel):
     question: str
     use_internet: bool = False  # valor por defecto si no se marca
 
+from langchain.chains import LLMChain
+
 @app.post("/ask")
 async def ask_bot(req: ChatRequest):
     global suggested_question, memory
@@ -230,45 +232,69 @@ async def ask_bot(req: ChatRequest):
     actual_prompt = req.question
     simple = is_simple_question(actual_prompt)
 
-    # Si es una pregunta simple, respondemos directamente con el modelo sin RAG ni Internet
+    chat_history = memory.chat_memory  # historial conversacional en texto (string)
+
     if simple and not req.use_internet:
-        final_response = model.invoke(actual_prompt).content
+        # Pregunta simple: incluye historial en el prompt
+        simple_prompt = f"""Historial de conversación: {chat_history}
+Pregunta: {actual_prompt}
+Respuesta:"""
+        final_response = model.invoke(simple_prompt).content
         final_sources = []
         source_type = "Modelo Lenguaje"
+
     else:
-        # RAG: Recuperación desde base vectorial
+        # Recupera docs para contexto
+        vector_retriever = vector_store.as_retriever(search_kwargs={'k': 6})
+        context_docs = vector_retriever.get_relevant_documents(actual_prompt)
+        context_text = "\n".join([doc.page_content for doc in context_docs])
+
+        # Prompt con memoria, contexto y pregunta
         rag_prompt = PromptTemplate(
-            template=f"""Basándote únicamente en el siguiente contexto, responde la pregunta del usuario explicando lo encontrado. Haz una pregunta relacionada con el contexto encontrado para recomendar al usuario.
-            Si la información no está en el contexto, responde EXACTAMENTE: "{Sin_Informacion}". No añadas nada más.
-            Contexto: {{context}}\nPregunta: {{question}}\nRespuesta:""",
-            input_variables=["context", "question"]
+            template="""
+Eres un asistente de IA experto en definiciones normativas y conceptos técnicos.
+Sigue estrictamente el formato indicado a continuación para tu respuesta excepto cuando te hablen con lenguaje natural:
+
+**Respuesta a tu pregunta**: <una definición concisa, citando normativa textual si es relevante>
+**Información adicional**: <una explicación detallada y pedagógica del concepto, aportando contexto adicional>
+
+El tono debe ser profesional, claro y pedagógico.
+
+Historial de conversación: {chat_history}
+Contexto: {context}
+Pregunta: {question}
+Respuesta:
+""",
+            input_variables=["chat_history", "context", "question"]
         )
 
-        rag_chain = RetrievalQA.from_chain_type(
-            llm=model,
-            retriever=vector_store.as_retriever(search_kwargs={'k': 6}),
-            return_source_documents=True,
-            chain_type_kwargs={"prompt": rag_prompt}
-        )
-        rag_result = rag_chain.invoke({"query": actual_prompt})
-        rag_answer = rag_result['result']
-        sources = rag_result.get('source_documents', [])
+        llm_chain = LLMChain(llm=model, prompt=rag_prompt)
 
-        # Si el usuario activó internet o no hay info en la base
+        rag_answer = llm_chain.run({
+            "chat_history": chat_history,
+            "context": context_text,
+            "question": actual_prompt
+        })
+
+        sources = [doc.dict() for doc in context_docs]
+
+        # Si activó internet o no hay info en la base
         if req.use_internet or Sin_Informacion in rag_answer:
             search_results = search_tool.run(actual_prompt)
+
             internet_prompt = f"""Eres un asistente de IA. Basándote en el historial de la conversación y los siguientes resultados de una búsqueda en Internet, 
-            responde a la "Pregunta nueva" del usuario de una forma amable y útil.
-            Historial de la conversación: {memory.chat_memory}
-            Resultados de búsqueda: "{search_results}"
-            Pregunta nueva: {actual_prompt}
-            Respuesta final:"""
+responde a la "Pregunta nueva" del usuario de una forma amable y útil.
+Historial de la conversación: {chat_history}
+Resultados de búsqueda: "{search_results}"
+Pregunta nueva: {actual_prompt}
+Respuesta final:"""
+
             final_response = model.invoke(internet_prompt).content
             final_sources = []
             source_type = "Internet"
         else:
             final_response = rag_answer
-            final_sources = [doc.dict() for doc in sources]
+            final_sources = sources
             source_type = "Documentos"
 
     # Guardar contexto y sugerencias
@@ -285,8 +311,10 @@ async def ask_bot(req: ChatRequest):
         "answer": final_response,
         "suggested_question": suggested_question,
         "sources": final_sources,
-        "source_type": source_type
+        #"source_type": source_type
     }
+
+
 
 @app.get("/chat-history")
 def get_chat_history():
