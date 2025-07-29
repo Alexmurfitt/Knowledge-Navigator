@@ -285,7 +285,7 @@ async def ask_bot(req: ChatRequest):
         "answer": final_response,
         "suggested_question": suggested_question,
         "sources": final_sources,
-        # "source_type": source_type
+        "source_type": source_type
     }
 
 @app.get("/chat-history")

@@ -7,6 +7,9 @@
   <title>Knowledge-Navigator</title>
   <link rel="stylesheet" href="../styles/chatstyles.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
 </head>
 
 <body class="chat-interface">
@@ -21,14 +24,15 @@
       <a href="#">Sign In</a>
       <a href="#" id="logoutBtn" style="display:none" onclick="cerrarSesion()">Logout</a>
 
-      <a href="#" class="btn-primary" onclick="abrirRegistro()">Sign Up</a>
+      <a href="#" class="btn-primary" onclick="abrirRegistro()">Get started</a>
     </nav>
   </header>
 
   <main class="chat-wrapper">
     <div class="chat-header">
-      <div class="chat-header-title"><span class="chat-icon"><img src="../styles/images/logobot.webp" alt="Documento" class="bot-image"></span> Document Assistant</div>
-      <button class="cleanChat" onclick="clearChat()">Limpiar Chat</button>
+      <div class="chat-header-title"><span class="chat-icon"><img src="../styles/images/logobot.webp" alt="Documento"
+            class="bot-image"></span> Document Assistant</div>
+
       <label class="switch-label">
         <input type="checkbox" id="use_internet"> <span class="switch"></span>Buscar en Internet
       </label>
@@ -41,9 +45,10 @@
     </div>
 
     <div class="chat-input">
+      <button class="cleanChat" onclick="clearChat()"><i class="fas fa-trash-alt"></i></button>
       <input type="text" id="question" placeholder="Ask a question about your documents..." />
 
-      <button onclick='askBot()'>➤</button>
+      <button class="send" onclick='askBot()'>➤</button>
     </div>
   </main>
 
@@ -89,6 +94,44 @@
       }
     });
 
+
+
+    function typeResponse(text, container) {
+      const messageElement = document.createElement("div");
+      messageElement.className = "message bot";
+      const msgContent = document.createElement("p");
+      messageElement.appendChild(msgContent);
+      container.appendChild(messageElement);
+
+      let index = 0;
+      const cleanText = text; // Guardar versión completa para almacenar
+
+      function typeChar() {
+        if (index < cleanText.length) {
+          msgContent.textContent += cleanText.charAt(index);
+          index++;
+          setTimeout(typeChar, 5); // velocidad de escritura
+        } else {
+          // Aplicar formato markdown + saltos de línea
+          msgContent.innerHTML = formatWithLineBreaks(parseMarkdownToHTML(cleanText));
+
+          const timestamp = document.createElement("span");
+          timestamp.className = "timestamp";
+          timestamp.textContent = new Date().toLocaleTimeString();
+          messageElement.appendChild(timestamp);
+
+          // Guardar en historial
+          saveChatHistory("Bot", cleanText, timestamp.textContent);
+
+          container.scrollTop = container.scrollHeight;
+        }
+      }
+
+      typeChar();
+    }
+
+
+
     async function askBot() {
       const question = document.getElementById("question").value;
       const use_internet = document.getElementById("use_internet").checked;
@@ -106,13 +149,16 @@
         });
 
         const data = await res.json();
-        console.log(data);
-        // Si quieres mostrar el tipo de fuente debajo del mensaje
+
         let responseText = data.answer;
+
+
+
+
         if (data.source_type) {
           responseText += `\n\n<span class="source-label">[Fuente: ${data.source_type}]</span>`;
         }
-        appendMessage("Bot", responseText);
+        typeResponse(responseText, chatBox);
 
 
       } catch (error) {
@@ -215,6 +261,9 @@
 
       appendMessage("Bot", mensaje);
     }
+
+
+
   </script>
 </body>
 
