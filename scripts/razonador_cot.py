@@ -1,12 +1,13 @@
 # ======================================
-# razonador_cot.py (con soporte web y formato estructurado)
+# razonador_cot.py (con historial, formato estructurado y soporte web)
 # ======================================
 from langchain.chat_models import init_chat_model
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 
-# Función para respuestas normativas o técnicas
-
-def generar_respuesta(pregunta: str, contexto: str = "", temperatura: float = 0.2, modo_conciso: bool = False) -> str:
+# =============================================================
+# FUNCIÓN PRINCIPAL CON SOPORTE DE HISTORIAL
+# =============================================================
+def generar_respuesta(pregunta: str, contexto: str = "", historial: str = "", temperatura: float = 0.2, modo_conciso: bool = False) -> str:
     if modo_conciso:
         system_prompt = (
             "Eres un asistente de IA que responde de forma breve, precisa y objetiva. "
@@ -20,10 +21,14 @@ def generar_respuesta(pregunta: str, contexto: str = "", temperatura: float = 0.
             "Responde **solo en español** y sigue el formato indicado a continuación para tu respuesta:\n\n"
             "Definición textual o normativa: <una definición concisa, citando normativa textual si es relevante>\n"
             "Explicación ampliada: <una explicación detallada y pedagógica del concepto, aportando contexto adicional>\n\n"
-            "El tono debe ser profesional, claro y pedagógico."
+            "El tono debe ser profesional, claro y pedagógico. Si hay historial conversacional, respeta su coherencia."
         )
 
-    if contexto and contexto.strip():
+    # Construir el mensaje humano con historial (si lo hay)
+    if historial.strip():
+        human_prompt = "Historial previo:\n{historial}\n\nContexto relevante:\n{contexto}\n\nPregunta: {pregunta}"
+        input_data = {"pregunta": pregunta, "contexto": contexto, "historial": historial}
+    elif contexto.strip():
         human_prompt = "Contexto relevante:\n{contexto}\n\nPregunta: {pregunta}"
         input_data = {"pregunta": pregunta, "contexto": contexto}
     else:
@@ -38,30 +43,34 @@ def generar_respuesta(pregunta: str, contexto: str = "", temperatura: float = 0.
         modelo = init_chat_model("gemini-2.5-flash", model_provider="google_genai", temperature=temperatura)
         cadena = prompt_template | modelo
         respuesta_modelo = cadena.invoke(input_data)
-        texto_respuesta = respuesta_modelo if isinstance(respuesta_modelo, str) else str(respuesta_modelo)
+        texto_respuesta = respuesta_modelo.content if hasattr(respuesta_modelo, "content") else str(respuesta_modelo)
         return texto_respuesta
     except Exception as e:
         return f"Error al generar respuesta con el modelo: {e}"
 
 
-# Función específica para respuestas a partir de snippets web
-
+# =============================================================
+# FUNCIÓN PARA RESPUESTA A PARTIR DE FRAGMENTOS WEB
+# =============================================================
 def generar_respuesta_web(pregunta: str, contexto: str) -> str:
     prompt_web = ChatPromptTemplate.from_template("""
-A continuación se presentan fragmentos de resultados de búsqueda web relacionados con la siguiente pregunta:
+A continuación se presentan fragmentos obtenidos en una búsqueda web sobre la siguiente pregunta del usuario:
 
 Pregunta: {pregunta}
 
-Fragmentos web:
+Fragmentos extraídos:
 {contexto}
 
-Tu tarea es generar una respuesta clara, objetiva, precisa y actual basada exclusivamente en estos fragmentos. 
-No inventes, no generalices, no expliques cómo funciona un modelo de lenguaje. 
-Limítate a resumir o sintetizar lo que indican los fragmentos y proporciona información verificable. Si los fragmentos son vagos, dilo.
+Tu tarea es generar una respuesta clara, precisa y basada exclusivamente en estos fragmentos. 
+No inventes ni extrapoles información. No expliques cómo funciona un modelo de lenguaje.
 
-Incluye:
+Responde directamente en el siguiente formato, **sin duplicar encabezados**:
+
 📘 Respuesta principal
-💡 Información adicional (si procede)
+<respuesta directa y verificable basada en los fragmentos>
+
+💡 Información adicional
+<añade contexto útil si aporta valor; si no lo hay, indícalo explícitamente>
 """)
 
     try:

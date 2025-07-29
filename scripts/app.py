@@ -40,15 +40,23 @@ if pregunta:
             st.error(f"❌ Error al procesar la pregunta: {e}")
             st.stop()
 
-        # ✅ Respuesta principal
-        st.markdown("## 📘 Respuesta")
-        st.markdown(limpiar_texto(respuesta) or "_No se obtuvo respuesta._")
+        # ✅ Limpieza de texto
+        respuesta_limpia = limpiar_texto(respuesta)
+        razonamiento_limpio = limpiar_texto(razonamiento)
 
-        # 💡 Explicación adicional
-        st.markdown("## 💡 Información adicional")
-        st.markdown(limpiar_texto(razonamiento) or "_No se proporcionó explicación adicional._")
+        # --- Mostrar respuesta principal
+        incluye_encabezado = any(etq in respuesta_limpia.lower() for etq in ["📘 respuesta", "📘 respuesta principal"])
+        if not incluye_encabezado:
+            st.markdown("## 📘 Respuesta")
+        st.markdown(respuesta_limpia or "_No se obtuvo respuesta._")
 
-        # 📚 Fuentes consultadas
+        # --- Mostrar razonamiento adicional (si no viene ya incluido)
+        razonamiento_incluido = "💡 información adicional" in respuesta_limpia.lower() or "💡 información adicional" in razonamiento_limpio.lower()
+        if not razonamiento_incluido:
+            st.markdown("## 💡 Información adicional")
+            st.markdown(razonamiento_limpio or "_No se proporcionó explicación adicional._")
+
+        # --- Mostrar fuentes
         st.markdown("## 📚 Fuentes consultadas")
         if fuentes:
             for fuente in fuentes:
@@ -56,7 +64,7 @@ if pregunta:
         else:
             st.markdown("_No se consultaron fuentes._")
 
-        # 🔍 Origen del conocimiento
+        # --- Mostrar nota sobre el origen de la información
         st.markdown("## 🔍 Nota sobre el origen de la información")
         if uso_externo and any("Documento" in f for f in fuentes):
             st.info("Se utilizó información combinada: documentos PDF + búsqueda web.")
