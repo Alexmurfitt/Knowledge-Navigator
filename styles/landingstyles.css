@@ -28,11 +28,11 @@ body {
   box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.3);
 }
 
-.navbar .Knowledge{
+.navbar .Knowledge {
   color: #2563eb;
 }
 
-.logo-image{
+.logo-image {
   width: 280px;
   height: 45px;
   margin-right: 5px;
@@ -53,7 +53,7 @@ body {
   background-color: #d8e8ff;
   border-radius: 6px;
   color: #3b82f6;
-  
+
 }
 
 .chat-btn {
@@ -88,6 +88,7 @@ body {
 
 nav a {
   margin-left: 20px;
+
   text-decoration: none;
   color: #686868;
   font-weight: 500;
@@ -172,21 +173,65 @@ nav a.btn {
   margin: 0;
 }
 
+.button-locked {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.button-locked .lock-icon {
+  font-size: 18px;
+}
+
+.tooltip {
+  margin-top: 10px;
+  color: #d9534f;
+  font-family: 'Segoe UI', sans-serif;
+  display: none;
+}
 
 .startchatting-btn {
-  background-color: #3b79ff;
+  background-color: #007bff;
   color: white;
-  padding: 20px 50px;
-  border-radius: 6px;
   text-decoration: none;
-  font-weight: 500;
-  font-size: 1.3rem;
-  transition: transform 0.3s ease, background-color 0.3s ease;
-  transform: scale(1);
+  padding: 20px 40px;
+  border-radius: 6px;
+  font-size: 26px;
+  font-family: 'Segoe UI', sans-serif;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  transition: background-color 0.3s ease;
 }
 
 .startchatting-btn:hover {
-  background-color: #1d4ed8; 
+  background-color: #0056b3;
+}
+
+.lock-icon {
+  font-size: 18px;
+}
+
+.tooltip {
+  color: #d9534f;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 14px;
+  margin-top: 8px;
+  display: none;
+}
+
+
+.startchatting-btn:hover {
+  background-color: #1d4ed8;
   transform: scale(1.05);
 }
 
@@ -270,14 +315,17 @@ nav a.btn {
   margin: 40px auto;
   max-width: 1200px;
 }
+
 .cta h2 {
   font-size: 28px;
   margin-bottom: 15px;
 }
+
 .cta p {
   font-size: 16px;
   margin-bottom: 25px;
 }
+
 .cta button {
   background-color: white;
   color: #4b00e0;
@@ -288,6 +336,7 @@ nav a.btn {
   cursor: pointer;
   font-size: 16px;
 }
+
 .cta button:hover {
   background-color: #f1f1f1;
 }
@@ -299,6 +348,7 @@ footer {
   padding: 40px 20px 20px;
   box-shadow: 0 -8px 6px -2px rgba(0, 0, 0, 0.3);
 }
+
 .footer-content {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -307,28 +357,35 @@ footer {
   margin: 0 auto;
   margin-left: 400px;
 }
+
 .footer-column h3 {
   font-size: 20px;
 }
+
 .footer-column h4 {
   font-size: 16px;
   margin-bottom: 10px;
 }
+
 .footer-column ul {
   list-style: none;
   padding: 0;
 }
+
 .footer-column li {
   margin-bottom: 8px;
   font-size: 14px;
 }
+
 .footer-column a {
   text-decoration: none;
   color: #ccc;
 }
+
 .footer-column a:hover {
   color: white;
 }
+
 .footer-column .social-icons a {
   margin-right: 10px;
   font-size: 18px;
@@ -344,58 +401,127 @@ footer {
   flex-direction: column;
   align-items: center;
 }
+
 .footer-bottom p {
   margin: 5px 0;
   font-size: 13px;
 }
+
 .legal-links {
   display: flex;
   gap: 15px;
   font-size: 13px;
 }
+
 .legal-links a {
   color: #ccc;
   text-decoration: none;
 }
+
 .legal-links a:hover {
   color: white;
 }
 
-.clients-image{
+.clients-image {
   width: 50px;
   height: 50px;
   margin-right: 10px;
   vertical-align: middle;
-  
+
 }
 
-.shield-image{
+.shield-image {
   width: 80px;
   height: 48px;
   margin-right: 10px;
   vertical-align: middle;
-  
+
 }
 
-.chat-image{
+.chat-image {
   width: 60px;
   height: 40px;
   margin-right: 10px;
   vertical-align: middle;
-  
+
 }
 
+/* Fondo modal oscuro */
+/* Fondo oscuro semitransparente, centrado con Flexbox */
 .modal {
+  display: none; /* oculto por defecto */
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background-color: rgba(0,0,0,0.4);
-  display: flex; align-items: center; justify-content: center;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 50, 0.4); /* azul oscuro translúcido */
   z-index: 1000;
+
+  /* CENTRADO con Flexbox */
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
+
+/* Caja del contenido del modal */
 .modal-content {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  min-width: 300px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  padding: 30px 40px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 100, 0.2);
+  position: relative;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Botón de cerrar */
+.modal-content .close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-size: 22px;
+  color: #333;
+  cursor: pointer;
+}
+
+
+/* Estilo inputs */
+.modal-content input[type="text"],
+.modal-content input[type="password"] {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  background-color: #f1f5ff;
+  font-size: 16px;
+}
+
+/* Botón submit */
+.modal-content button[type="submit"] {
+  width: 100%;
+  padding: 12px;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.3s ease;
+}
+
+.modal-content button[type="submit"]:hover {
+  background-color: #3578d1;
+}
+
+/* Mensaje de error */
+.error-msg {
+  color: #d9534f;
+  font-size: 14px;
+  margin-top: 8px;
+  display: none;
+  text-align: center;
 }

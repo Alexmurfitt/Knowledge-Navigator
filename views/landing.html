@@ -22,8 +22,14 @@
 
       <!-- Botones en tu navbar o donde quieras -->
       <a href="#" id="openLogin">Sign In</a>
+
+
+      <p id="saludoUsuario" style="display:none;"></p>
       <a href="#" id="logoutBtn" style="display:none" onclick="cerrarSesion()">Logout</a>
+
+
       <a href="#" id="openRegister" class="btn-primary">Get started</a>
+
 
       <!-- Modal Login -->
       <div id="loginModal" class="modal" style="display: none;">
@@ -31,13 +37,14 @@
           <span class="close" id="closeLogin">&times;</span>
           <h2>Iniciar Sesión</h2>
           <form id="loginForm">
-            <input type="text" id="username" placeholder="Usuario" required><br>
-            <input type="password" id="password" placeholder="Contraseña" required><br>
+            <input type="text" id="username" placeholder="Usuario" required>
+            <input type="password" id="password" placeholder="Contraseña" required>
             <button type="submit">Entrar</button>
-            <p id="loginError" style="color: red; display: none;">Credenciales incorrectas</p>
+            <p id="loginError" class="error-msg">Credenciales incorrectas</p>
           </form>
         </div>
       </div>
+
 
       <!-- Modal Registro -->
       <div id="registroModal" class="modal" style="display: none;">
@@ -63,7 +70,14 @@
       Upload your company PDFs and get instant, intelligent answers through our AI-powered chatbot. Streamline knowledge
       sharing and boost productivity across your organization.
     </p>
-    <a href="chat.html" class="startchatting-btn">Start Chatting</a>
+
+
+    <a href="chat.html" id="startChattingBtn" class="startchatting-btn">
+      <span id="lockIcon" class="lock-icon" style="display: none;"></span> Start Chatting
+    </a>
+    <div id="login-tooltip" class="tooltip">Necesitas iniciar sesión para utilizar esta función.</div>
+
+
     <div class="stats">
       <div class="card">
         <div><img src="../styles/images/clients.png" alt="Documento" class="clients-image"></div>50+
@@ -181,6 +195,24 @@
   </div>
 </footer>
 <script>
+  function estaLogueado() {
+    return localStorage.getItem("usuario") !== null;
+  }
+  function ajustarNavbarSegunLogin() {
+    const navbar = document.querySelector('.navbar');
+    if (!navbar) return;
+
+    const estiloActual = window.getComputedStyle(navbar);
+    const paddingActual = parseInt(estiloActual.paddingRight); // en píxeles
+
+    if (estaLogueado()) {
+      navbar.style.paddingRight = (paddingActual - 30) + 'px';
+    } else {
+      navbar.style.paddingRight = paddingActual + 'px'; // lo deja como estaba
+    }
+  }
+
+
   // --- LOGIN ---
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -211,40 +243,90 @@
       document.getElementById('loginModal').style.display = 'none';
       e.target.reset();
       // Después del login exitoso
-      localStorage.setItem("usuario", username); // guarda el nombre del usuario
-      localStorage.setItem("logueado", "true");
+      if (data.success) {
+        localStorage.setItem("usuario", username);
+        actualizarInterfazSegunLogin(); // 🔥 actualiza la UI inmediatamente
+        ajustarNavbarSegunLogin();
+        // Cerrar modal, limpiar campos
+        const startBtn = document.getElementById("startChattingBtn");
+        const lockIcon = document.getElementById("lockIcon");
+        const tooltip = document.getElementById("login-tooltip");
+        if (startBtn) {
+          startBtn.onclick = null;
+          startBtn.href = "chat.html";
+          if (lockIcon) lockIcon.style.display = "none";
+          if (tooltip) tooltip.style.display = "none";
+        }
+        document.getElementById('loginModal').style.display = 'none';
+        e.target.reset();
+      }
 
-
-      // Aquí puedes añadir lógica extra, ej: guardar token o cambiar UI
 
     } catch (err) {
       errorElem.textContent = 'Error de conexión';
       errorElem.style.display = 'block';
     }
   });
-  window.onload = function () {
+
+
+  function actualizarInterfazSegunLogin() {
     const usuario = localStorage.getItem("usuario");
     const logueado = !!usuario;
 
-    if (logueado) {
-      document.getElementById("openLogin").style.display = "none";
-      document.getElementById("openRegister").style.display = "none";
-      document.getElementById("logoutBtn").style.display = "inline";
+    document.getElementById("openLogin").style.display = logueado ? "none" : "inline";
+    document.getElementById("openRegister").style.display = logueado ? "none" : "inline";
+    document.getElementById("logoutBtn").style.display = logueado ? "inline" : "none";
 
-      // Ejemplo: mostrar el nombre del usuario
-      const saludo = document.getElementById("saludoUsuario");
-      if (saludo) {
+    const saludo = document.getElementById("saludoUsuario");
+    if (saludo) {
+      if (logueado) {
         saludo.innerText = `Bienvenido, ${usuario}`;
-        saludo.style.display = "block";
+        saludo.style.display = "inline";
+      } else {
+        saludo.style.display = "none";
       }
-
-    } else {
-      document.getElementById("openLogin").style.display = "inline";
-      document.getElementById("openRegister").style.display = "inline";
-      document.getElementById("logoutBtn").style.display = "none";
     }
+
+    // Control del botón Start Chatting
+    const lockIcon = document.getElementById("lockIcon");
+    const tooltip = document.getElementById("login-tooltip");
+    const startChattingBtn = document.getElementById("startChattingBtn");
+
+    if (!logueado) {
+      lockIcon.style.display = "inline";
+
+      startChattingBtn.href = "#"; // bloquea el link
+
+      startChattingBtn.onclick = function (e) {
+        e.preventDefault();
+        tooltip.style.display = "block";
+
+        // Opcional: ocultar tooltip después de 3 segundos
+        setTimeout(() => {
+          tooltip.style.display = "none";
+        }, 3000);
+      };
+    } else {
+      lockIcon.style.display = "none";
+      tooltip.style.display = "none";
+
+      startChattingBtn.href = "chat.html"; // activa el link
+      startChattingBtn.onclick = null; // quita bloqueo
+    }
+  }
+
+
+  window.onload = function () {
+    actualizarInterfazSegunLogin(); // aplica el estado inicial según login
+    ajustarNavbarSegunLogin();
   };
 
+
+  function cerrarSesion() {
+    localStorage.removeItem("usuario");
+    actualizarInterfazSegunLogin();
+    location.reload(); // recarga la página para aplicar cambios
+  }
 
   // --- REGISTRO ---
   document.getElementById('registroForm').addEventListener('submit', async (e) => {
@@ -284,11 +366,11 @@
   // Abrir modales
   document.getElementById('openLogin').onclick = function (e) {
     e.preventDefault();
-    document.getElementById('loginModal').style.display = 'block';
+    document.getElementById('loginModal').style.display = 'flex';
   }
   document.getElementById('openRegister').onclick = function (e) {
     e.preventDefault();
-    document.getElementById('registroModal').style.display = 'block';
+    document.getElementById('registroModal').style.display = 'flex';
   }
 
   // Cerrar modales con la X

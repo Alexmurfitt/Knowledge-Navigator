@@ -15,45 +15,90 @@
 
 <body>
   <header class="navbar">
-    <div class="logo"><img src="../styles/images/logo1.webp" alt="Documento"
-            class="logo-image"><span class="Knowledge"></span></div>
+    <div class="logo"><img src="../styles/images/logo1.webp" alt="Documento" class="logo-image"><span
+        class="Knowledge"></span></div>
     <nav>
+
       <a class="home-btn" href="landing.html">Home</a>
       <a class="chat-btn" href="chat.html">Chat</a>
       <a class="docs-btn" href="documents.html">Documents</a>
-      <a href="#">Sign In</a>
+
+      <!-- Botones en tu navbar o donde quieras -->
+      <a href="#" id="openLogin">Sign In</a>
+
+
+      <p id="saludoUsuario" style="display:none;"></p>
       <a href="#" id="logoutBtn" style="display:none" onclick="cerrarSesion()">Logout</a>
 
-      <a href="#" class="btn-primary" onclick="abrirRegistro()">Get started</a>
+
+      <a href="#" id="openRegister" class="btn-primary">Get started</a>
+
+      <!-- Modal Login -->
+      <div id="loginModal" class="modal" style="display: none;">
+        <div class="modal-content">
+          <span class="close" id="closeLogin">&times;</span>
+          <h2>Iniciar Sesión</h2>
+          <form id="loginForm">
+            <input type="text" id="username" placeholder="Usuario" required><br>
+            <input type="password" id="password" placeholder="Contraseña" required><br>
+            <button type="submit">Entrar</button>
+            <p id="loginError" style="color: red; display: none;">Credenciales incorrectas</p>
+          </form>
+        </div>
+      </div>
+
+      <!-- Modal Registro -->
+      <div id="registroModal" class="modal" style="display: none;">
+        <div class="modal-content">
+          <span class="close" id="closeRegister">&times;</span>
+          <h2>Crear Cuenta</h2>
+          <form id="registroForm">
+            <input type="text" id="newUsername" placeholder="Nuevo usuario" required><br>
+            <input type="password" id="newPassword" placeholder="Contraseña" required><br>
+            <button type="submit">Registrarse</button>
+            <p id="registroError" style="color: red; display: none;">Nombre de usuario ya en uso</p>
+          </form>
+        </div>
+      </div>
+
+
     </nav>
   </header>
+  <div id="protectedContent" style="display: none;">
+    <main class="library-container">
+      <div class="library-header">
+        <div>
+          <h1>Document Library</h1>
+          <p>Manage and organize your enterprise documents</p>
+        </div>
+        <div class="controls">
 
-  <main class="library-container">
-    <div class="library-header">
-      <div>
-        <h1>Document Library</h1>
-        <p>Manage and organize your enterprise documents</p>
+          <input type="file" id="pdfFiles" multiple accept="application/pdf" />
+          <label for="pdfFiles" class="upload-label">Seleccionar PDF(s)</label>
+          <div id="fileList" class="file-name"> "Aquí verás tus archivos a subir" </div>
+          <button onclick="uploadPDFs()" class="upload-btn">Upload Documents</button>
+
+        </div>
       </div>
-      <div class="controls">
 
-        <input type="file" id="pdfFiles" multiple accept="application/pdf" />
-        <label for="pdfFiles" class="upload-label">Seleccionar PDF(s)</label>
-        <div id="fileList" class="file-name"> "Aquí verás tus archivos a subir" </div>
-        <button onclick="uploadPDFs()" class="upload-btn">Upload Documents</button>
 
+
+      <p id="no-docs-message" style="text-align: center; color: #666;">
+        No tienes ningún PDF subido aún.
+      </p>
+
+      <div class="document-grid">
+        <!-- Document card example -->
       </div>
-    </div>
+    </main>
+  </div>
+  <div id="loginRequired" style="display: none; text-align: center; margin-top: 80px;">
+    <h2 style="color: #d9534f; font-family: 'Inter', sans-serif;">
+      Necesitas iniciar sesión para usar esta función.
+    </h2>
+    <a href="landing.html" style="color: #007bff; text-decoration: underline;">Volver al inicio</a>
+  </div>
 
-
-
-    <p id="no-docs-message" style="text-align: center; color: #666;">
-      No tienes ningún PDF subido aún.
-    </p>
-
-    <div class="document-grid">
-      <!-- Document card example -->
-    </div>
-  </main>
 </body>
 
 
@@ -437,7 +482,179 @@
     cargarDocumentosDesdeBackend();
   });
 
+  // --- LOGIN ---
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
 
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const errorElem = document.getElementById('loginError');
+    errorElem.style.display = 'none';
+
+    try {
+      const res = await fetch('http://localhost:5000/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (!res.ok) {
+        errorElem.textContent = 'Credenciales incorrectas';
+        errorElem.style.display = 'block';
+        return;
+      }
+
+      const data = await res.json();
+      alert(data.message);
+
+
+      // Cerrar modal y limpiar inputs
+      document.getElementById('loginModal').style.display = 'none';
+      e.target.reset();
+      // Después del login exitoso
+      if (data.success) {
+        localStorage.setItem("usuario", username);
+        actualizarInterfazSegunLogin(); // 🔥 actualiza la UI inmediatamente
+        ajustarNavbarSegunLogin()
+
+        // Cerrar modal, limpiar campos
+        document.getElementById('loginModal').style.display = 'none';
+        e.target.reset();
+      }
+
+
+    } catch (err) {
+      errorElem.textContent = 'Error de conexión';
+      errorElem.style.display = 'block';
+    }
+  });
+
+
+  function actualizarInterfazSegunLogin() {
+    const usuario = localStorage.getItem("usuario");
+
+    const logueado = !!usuario;
+    document.getElementById("openLogin").style.display = logueado ? "none" : "inline";
+    document.getElementById("openRegister").style.display = logueado ? "none" : "inline";
+    document.getElementById("logoutBtn").style.display = logueado ? "inline" : "none";
+
+    const saludo = document.getElementById("saludoUsuario");
+    if (saludo) {
+      if (logueado) {
+        saludo.innerText = `Bienvenido, ${usuario}`;
+        saludo.style.display = "inline";
+      } else {
+        saludo.style.display = "none";
+      }
+    }
+  }
+
+  window.onload = function () {
+    const logueado = estaLogueado();
+    const content = document.getElementById("protectedContent");
+    const loginMessage = document.getElementById("loginRequired");
+
+    if (logueado) {
+      content.style.display = "block";
+      loginMessage.style.display = "none";
+    } else {
+      content.style.display = "none";
+      loginMessage.style.display = "block";
+    }
+
+    actualizarInterfazSegunLogin(); // aplica el estado inicial según login
+    ajustarNavbarSegunLogin()
+  };
+
+
+  function cerrarSesion() {
+    localStorage.removeItem("usuario");
+    actualizarInterfazSegunLogin();
+    location.reload(); // recarga la página para aplicar cambios
+  }
+
+  // --- REGISTRO ---
+  document.getElementById('registroForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const username = document.getElementById('newUsername').value.trim();
+    const password = document.getElementById('newPassword').value.trim();
+    const errorElem = document.getElementById('registroError');
+    errorElem.style.display = 'none';
+
+    try {
+      const res = await fetch('http://localhost:5000/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (!res.ok) {
+        errorElem.textContent = 'Nombre de usuario ya en uso';
+        errorElem.style.display = 'block';
+        return;
+      }
+
+      alert('Registro exitoso! Ahora puedes iniciar sesión.');
+
+      // Cerrar modal y limpiar inputs
+      document.getElementById('registroModal').style.display = 'none';
+      e.target.reset();
+
+    } catch (err) {
+      errorElem.textContent = 'Error de conexión';
+      errorElem.style.display = 'block';
+    }
+  });
+
+
+  // Abrir modales
+  document.getElementById('openLogin').onclick = function (e) {
+    e.preventDefault();
+    document.getElementById('loginModal').style.display = 'block';
+  }
+  document.getElementById('openRegister').onclick = function (e) {
+    e.preventDefault();
+    document.getElementById('registroModal').style.display = 'block';
+  }
+
+  // Cerrar modales con la X
+  document.getElementById('closeLogin').onclick = function () {
+    document.getElementById('loginModal').style.display = 'none';
+  }
+  document.getElementById('closeRegister').onclick = function () {
+    document.getElementById('registroModal').style.display = 'none';
+  }
+
+  // Cerrar modal clickeando fuera del contenido
+  window.onclick = function (event) {
+    const loginModal = document.getElementById('loginModal');
+    const registroModal = document.getElementById('registroModal');
+    if (event.target == loginModal) {
+      loginModal.style.display = 'none';
+    }
+    if (event.target == registroModal) {
+      registroModal.style.display = 'none';
+    }
+  }
+
+
+  function estaLogueado() {
+    return localStorage.getItem("usuario") !== null;
+  }
+  function ajustarNavbarSegunLogin() {
+    const navbar = document.querySelector('.navbar');
+    if (!navbar) return;
+
+    const estiloActual = window.getComputedStyle(navbar);
+    const paddingActual = parseInt(estiloActual.paddingRight); // en píxeles
+
+    if (estaLogueado()) {
+      navbar.style.paddingRight = (paddingActual - 30) + 'px';
+    } else {
+      navbar.style.paddingRight = paddingActual + 'px'; // lo deja como estaba
+    }
+  }
 
 </script>
 </body>
