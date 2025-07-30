@@ -225,14 +225,36 @@ class ChatRequest(BaseModel):
 
 from langchain.chains import LLMChain
 
+from fastapi import HTTPException
+
 @app.post("/ask")
 async def ask_bot(req: ChatRequest):
     global suggested_question, memory
 
-    actual_prompt = req.question
-    simple = is_simple_question(actual_prompt)
-
+    actual_prompt = req.question.lower().strip()
     chat_history = memory.chat_memory  # historial conversacional en texto (string)
+
+    # 🔍 REGRA MANUAL — DETECTAR "cómo subir archivos"
+    if any(frase in actual_prompt for frase in [
+        "subir archivo", 
+        "subir archivos", 
+        "cómo subo", 
+        "cómo puedo subir", 
+        "dónde subo", 
+        "cómo cargar", 
+        "adjuntar documento"
+    ]):
+        respuesta_manual = "Puedes subir los archivos desde la pestaña Documentos, en la parte superior de la aplicación."
+        memory.save_context({"input": req.question}, {"output": respuesta_manual})
+        return {
+            "answer": respuesta_manual,
+            "suggested_question": None,
+            "sources": [],
+            #"source_type": "Regla manual"
+        }
+
+    # Clasificación de pregunta
+    simple = is_simple_question(actual_prompt)
 
     if simple and not req.use_internet:
         # Pregunta simple: incluye historial en el prompt
@@ -260,6 +282,8 @@ Sigue estrictamente el formato indicado a continuación para tu respuesta except
 
 El tono debe ser profesional, claro y pedagógico.
 
+Además de usar los documentos proporcionados como contexto, debes saber que si no encuentras información suficiente, puedes apoyarte en búsquedas en Internet cuando esté habilitado por el sistema.
+
 Historial de conversación: {chat_history}
 Contexto: {context}
 Pregunta: {question}
@@ -278,7 +302,6 @@ Respuesta:
 
         sources = [doc.dict() for doc in context_docs]
 
-        # Si activó internet o no hay info en la base
         if req.use_internet or Sin_Informacion in rag_answer:
             search_results = search_tool.run(actual_prompt)
 
@@ -305,7 +328,7 @@ Respuesta final:"""
     else:
         suggested_question = None
 
-    memory.save_context({"input": actual_prompt}, {"output": final_response})
+    memory.save_context({"input": req.question}, {"output": final_response})
 
     return {
         "answer": final_response,
@@ -495,12 +518,6 @@ async def mostrar_documentos_unicos(collection_name: str):
             with_payload=True   #Awui esta incluyendo los metadatos
         )
 
-        print(f"Lo que devuelve scrolled_points = {scrolled_points[0]}")
-        print(50*"-")
-        print(f"Lo que devuelve scrolled_points = {scrolled_points[1]}")
-        print(f"En este caso, quiero saber la página donde extrajo la información, que es: {scrolled_points[0].payload['metadata']['page_number']} ")
-        print(f"Lo que devuelve _ : {llamada}")
-
         document_names = set()  #En vez de un diccionario o una lista pongo un set ya que almacena documentos unicos
         for point in scrolled_points:
             if point.payload and "metadata" in point.payload:   #Si hay payload y metadata esta dentro de payload (Lo de metadata es dentro de los metadatos hay un campo llamado metadata y dentro estan el resto de variables)
@@ -540,6 +557,8 @@ async def enviar_progreso(filename: str, porcentaje: int):
 
 from app.auth_utils import authenticate_user, register_user
 from passlib.context import CryptContext
+from app.database import fake_users_db
+
 
 class LoginData(BaseModel):
     username: str
@@ -548,25 +567,35 @@ class LoginData(BaseModel):
 # Seguridad
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-fake_users_db = {
-    "aaron": {
-        "username": "aaron",
-        "hashed_password": pwd_context.hash("admin123"),
-    }
-}
+
+from fastapi.responses import JSONResponse
+from fastapi import status  # 👈 importante
 
 @app.post("/login")
 async def login(data: LoginData):
     if authenticate_user(data.username, data.password):
-        return JSONResponse({"success": True, "message": f"Bienvenido {data.username}"})
-    return JSONResponse({"success": False, "message": "Usuario o contraseña incorrectos"})
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"success": True, "message": f"Bienvenido {data.username}"}
+        )
+    return JSONResponse(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        content={"success": False, "message": "Usuario o contraseña incorrectos"}
+    )
+
 
 @app.post("/register")
 async def register(data: LoginData):
     if register_user(data.username, data.password):
-        return JSONResponse({"success": True, "message": "Usuario registrado correctamente"})
-    else:
-        return JSONResponse({"success": False, "message": "El usuario ya existe"})
+        return JSONResponse(
+            status_code=status.HTTP_201_CREATED,
+            content={"success": True, "message": "Usuario registrado correctamente"}
+        )
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"success": False, "message": "El usuario ya existe"}
+    )
+
     
 def user_exists(username: str):
     return username in fake_users_db

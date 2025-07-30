@@ -1,15 +1,11 @@
 from passlib.context import CryptContext
+from app.database import fake_users_db
 
-# Seguridad
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+print(pwd_context.hash("admin123"))
 
-# Base de datos simulada
-fake_users_db = {
-    "aaron": {
-        "username": "aaron",
-        "hashed_password": pwd_context.hash("admin123"),
-    }
-}
+
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -21,12 +17,10 @@ def get_user(username: str):
     return fake_users_db.get(username)
 
 def authenticate_user(username: str, password: str):
-    user = get_user(username)
+    user = fake_users_db.get(username)
     if not user:
         return False
-    if not verify_password(password, user["hashed_password"]):
-        return False
-    return True
+    return pwd_context.verify(password, user["hashed_password"])
 
 def register_user(username: str, password: str):
     if username in fake_users_db:
@@ -34,7 +28,7 @@ def register_user(username: str, password: str):
         return False
     fake_users_db[username] = {
         "username": username,
-        "hashed_password": hash_password(password),
+        "hashed_password": "$2b$12$4TMLEwplnwkIWIMemmKyQebdPsytXvXPNdsJwJVStupgvDXDJyEtW"#hash_password(password),
     }
     print("✅ Usuario registrado correctamente.")
     return True

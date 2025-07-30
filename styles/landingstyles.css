@@ -28,6 +28,18 @@ body {
   box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.3);
 }
 
+.navbar .Knowledge{
+  color: #2563eb;
+}
+
+.logo-image{
+  width: 280px;
+  height: 45px;
+  margin-right: 5px;
+  vertical-align: middle;
+  border-radius: 10px;
+}
+
 .logo {
   margin-left: 250px;
   font-weight: bold;
@@ -162,7 +174,7 @@ nav a.btn {
 
 
 .startchatting-btn {
-  background-color: #2f70fc;
+  background-color: #3b79ff;
   color: white;
   padding: 20px 50px;
   border-radius: 6px;
@@ -196,6 +208,10 @@ nav a.btn {
   font-size: 1rem;
   color: #6b7280;
   margin-bottom: 48px;
+}
+
+.features-section .highlight {
+  color: #1d4ed8;
 }
 
 .features-grid {
@@ -246,7 +262,7 @@ nav a.btn {
 }
 
 .cta {
-  background: linear-gradient(to right, #4b00e0, #a200ff);
+  background: linear-gradient(to right, #00d9ff, #4625ff);
   color: white;
   text-align: center;
   padding: 60px 20px;
