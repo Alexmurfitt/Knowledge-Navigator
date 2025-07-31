@@ -13,7 +13,7 @@ body {
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Segoe UI', sans-serif;
   background-color: #f9fafb;
   color: #333;
   margin: 0;
@@ -42,7 +42,7 @@ nav a {
 }
 
 .logo-image{
-  width: 280px;
+  width: 150px;
   height: 45px;
   margin-right: 5px;
   vertical-align: middle;
@@ -91,14 +91,6 @@ nav a {
   background-color: #d8e8ff;
   border-radius: 6px;
   color: #3b82f6;
-}
-
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: #f9fafb;
-  color: #111827;
-  margin: 0;
-  padding: 0;
 }
 
 .library-container {

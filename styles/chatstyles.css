@@ -7,7 +7,7 @@
 
 html, body {
   height: 100%;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Segoe UI', sans-serif;
   background-color: #f9fafb;
   color: #333;
 }
@@ -34,9 +34,9 @@ nav a {
 }
 
 .logo-image{
-  width: 280px;
+  width: 150px;
   height: 45px;
-  margin-right: 5px;
+  margin-right: 20px;
   vertical-align: middle;
   border-radius: 10px;
 }
@@ -189,7 +189,8 @@ nav a {
 /* CHAT MESSAGES */
 .chat-messages {
   flex: 1;
-  margin-top:40px;
+  padding-top: 20px;
+  margin-top:5px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;

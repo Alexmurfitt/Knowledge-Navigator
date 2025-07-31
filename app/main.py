@@ -259,8 +259,8 @@ async def ask_bot(req: ChatRequest):
     if simple and not req.use_internet:
         # Pregunta simple: incluye historial en el prompt
         simple_prompt = f"""Historial de conversación: {chat_history}
-Pregunta: {actual_prompt}
-Respuesta:"""
+        Pregunta: {actual_prompt}
+        Respuesta:"""
         final_response = model.invoke(simple_prompt).content
         final_sources = []
         source_type = "Modelo Lenguaje"
@@ -306,11 +306,11 @@ Respuesta:
             search_results = search_tool.run(actual_prompt)
 
             internet_prompt = f"""Eres un asistente de IA. Basándote en el historial de la conversación y los siguientes resultados de una búsqueda en Internet, 
-responde a la "Pregunta nueva" del usuario de una forma amable y útil.
-Historial de la conversación: {chat_history}
-Resultados de búsqueda: "{search_results}"
-Pregunta nueva: {actual_prompt}
-Respuesta final:"""
+            responde a la "Pregunta nueva" del usuario de una forma amable y útil.
+            Historial de la conversación: {chat_history}
+            Resultados de búsqueda: "{search_results}"
+            Pregunta nueva: {actual_prompt}
+            Respuesta final:"""
 
             final_response = model.invoke(internet_prompt).content
             final_sources = []
