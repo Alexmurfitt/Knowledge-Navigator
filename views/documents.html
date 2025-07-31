@@ -232,6 +232,12 @@
       error: "Error"
     };
 
+
+    function formatDateTime(date) {
+      const options = { day: 'numeric', month: 'long', year: 'numeric' };
+      return date.toLocaleDateString('es-ES', options);
+    }
+
     const now = new Date();
     const formattedDate = formatDateTime(now);
 
@@ -366,12 +372,7 @@
   }
 
 
-  function formatDateTime(date) {
-    return date.toLocaleString("es-ES", {
-      dateStyle: "short",
-      timeStyle: "short"
-    });
-  }
+
 
   let documentos = []
 

@@ -230,7 +230,7 @@
       msgContent.textContent = message;
 
       if (sender === "Bot") {
-        msgContent.innerHTML = formatWithLineBreaks(parseMarkdownToHTML(message));  // Convierte **texto** a <strong>
+        msgContent.innerHTML = formatWithLineBreaks(parseMarkdownToHTML(message));  
       } else {
         msgContent.textContent = message;
       }

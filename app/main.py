@@ -274,21 +274,21 @@ async def ask_bot(req: ChatRequest):
         # Prompt con memoria, contexto y pregunta
         rag_prompt = PromptTemplate(
             template="""
-Eres un asistente de IA experto en definiciones normativas y conceptos técnicos.
-Sigue estrictamente el formato indicado a continuación para tu respuesta excepto cuando te hablen con lenguaje natural:
+            Eres un asistente de IA experto en definiciones normativas y conceptos técnicos.
+            Sigue estrictamente el formato indicado a continuación para tu respuesta excepto cuando te hablen con lenguaje natural:
 
-**Respuesta a tu pregunta**: <una definición concisa, citando normativa textual si es relevante>
-**Información adicional**: <una explicación detallada y pedagógica del concepto, aportando contexto adicional>
+            **Respuesta a tu pregunta**: <una definición concisa, citando normativa textual si es relevante>
+            **Información adicional**: <una explicación detallada y pedagógica del concepto, aportando contexto adicional>
 
-El tono debe ser profesional, claro y pedagógico.
+            El tono debe ser profesional, claro y pedagógico.
 
-Además de usar los documentos proporcionados como contexto, debes saber que si no encuentras información suficiente, puedes apoyarte en búsquedas en Internet cuando esté habilitado por el sistema.
+            Además de usar los documentos proporcionados como contexto, debes saber que si no encuentras información suficiente, puedes apoyarte en búsquedas en Internet cuando esté habilitado por el sistema.
 
-Historial de conversación: {chat_history}
-Contexto: {context}
-Pregunta: {question}
-Respuesta:
-""",
+            Historial de conversación: {chat_history}
+            Contexto: {context}
+            Pregunta: {question}
+            Respuesta:
+            """,
             input_variables=["chat_history", "context", "question"]
         )
 
@@ -385,17 +385,10 @@ async def upload_pdfs(files: List[UploadFile] = File(...)):
             if not filename.lower().endswith('.pdf'):
                 raise HTTPException(status_code=400, detail=f"El archivo {filename} no es un PDF.")
 
-            # # ⛔ CANCELADO antes de procesar
-            # if canceled_uploads.get(filename):
-            #     print(f"🚫 Subida cancelada antes de iniciar procesamiento de '{filename}'.")
-            #     canceled_uploads.pop(filename, None)
-            #     continue
-
             file_content = await uploaded_file.read()
             print(f"Tamaño del archivo leído: {len(file_content)} bytes")
 
             uploaded_file.file.seek(0)
-
 
             structured_blocks = []
             bookmark_map = None
@@ -413,12 +406,6 @@ async def upload_pdfs(files: List[UploadFile] = File(...)):
 
             # Crear los chunks
             file_chunks = create_langchain_chunks(structured_blocks, filename, bookmark_map)
-
-            # # ⛔ CANCELADO después del procesamiento (antes de subir)
-            # if canceled_uploads.get(filename):
-            #     print(f"🚫 Subida cancelada justo antes de enviar chunks de '{filename}'.")
-            #     canceled_uploads.pop(filename, None)
-            #     continue
 
             all_final_chunks.extend(file_chunks)
 
@@ -469,15 +456,12 @@ def crear_vectorstore(collection_name: str):
 @app.delete("/delete")
 async def eliminar_pdf_qdrant(collection_name: str, pdf_nombre: str):
     print(f"📥 DELETE recibido para: {pdf_nombre} en colección: {collection_name}")
-
     canceled_uploads[pdf_nombre] = True
-
     # Conexión con el cliente de Qdrant
     client = QdrantClient(
         url=url, 
         api_key=api_key
     )
-
     filter = models.Filter(
         must=[
             models.FieldCondition(
@@ -486,7 +470,6 @@ async def eliminar_pdf_qdrant(collection_name: str, pdf_nombre: str):
             )
         ]
     )
-
     print(filter)
 
     try:
