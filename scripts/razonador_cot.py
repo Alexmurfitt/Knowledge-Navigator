@@ -1,32 +1,31 @@
-# ======================================
-# razonador_cot.py (con historial, formato estructurado y soporte web)
-# ======================================
+# =============================================================
+# razonador_cot.py — Versión definitiva con historial conversacional y respuesta pedagógica o concisa
+# =============================================================
+
 from langchain.chat_models import init_chat_model
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 
 # =============================================================
-# FUNCIÓN PRINCIPAL CON SOPORTE DE HISTORIAL
+# FUNCIÓN PRINCIPAL: RESPUESTA A PARTIR DE CONTEXTO (local)
 # =============================================================
 def generar_respuesta(pregunta: str, contexto: str = "", historial: str = "", temperatura: float = 0.2, modo_conciso: bool = False) -> str:
-    if modo_conciso:
-        system_prompt = (
-            "Eres un asistente de IA que responde de forma breve, precisa y objetiva. "
-            "Responde **solo en español** y proporciona una sola frase clara con el dato exacto que responde a la pregunta, "
-            "sin explicaciones adicionales ni justificaciones. No uses encabezados ni subtítulos. "
-            "Ejemplo de formato: 'Hoy es viernes 25 de julio de 2025.'"
-        )
-    else:
-        system_prompt = (
-            "Eres un asistente de IA experto en definiciones normativas y conceptos técnicos. "
-            "Responde **solo en español** y sigue el formato indicado a continuación para tu respuesta:\n\n"
-            "Definición textual o normativa: <una definición concisa, citando normativa textual si es relevante>\n"
-            "Explicación ampliada: <una explicación detallada y pedagógica del concepto, aportando contexto adicional>\n\n"
-            "El tono debe ser profesional, claro y pedagógico. Si hay historial conversacional, respeta su coherencia."
-        )
+    # SYSTEM PROMPT
+    system_prompt = (
+        "Eres un asistente conversacional que responde de forma breve, clara y precisa, sin explicaciones." if modo_conciso else
+        "Eres un asistente experto que responde con precisión y pedagogía. Usa el siguiente formato:\n\n"
+        "Definición textual o normativa: <respuesta principal>\n"
+        "Explicación ampliada: <explicación complementaria y contextual>\n\n"
+        "Siempre responde en español, con tono profesional y accesible."
+    )
 
-    # Construir el mensaje humano con historial (si lo hay)
+    # HUMAN PROMPT
     if historial.strip():
-        human_prompt = "Historial previo:\n{historial}\n\nContexto relevante:\n{contexto}\n\nPregunta: {pregunta}"
+        human_prompt = (
+            "Esta es una conversación continua.\n\n"
+            "Historial previo:\n{historial}\n\n"
+            "Contexto relevante:\n{contexto}\n\n"
+            "Pregunta actual:\n{pregunta}"
+        )
         input_data = {"pregunta": pregunta, "contexto": contexto, "historial": historial}
     elif contexto.strip():
         human_prompt = "Contexto relevante:\n{contexto}\n\nPregunta: {pregunta}"
@@ -36,47 +35,43 @@ def generar_respuesta(pregunta: str, contexto: str = "", historial: str = "", te
         input_data = {"pregunta": pregunta}
 
     try:
-        prompt_template = ChatPromptTemplate.from_messages([
+        prompt = ChatPromptTemplate.from_messages([
             SystemMessagePromptTemplate.from_template(system_prompt),
             HumanMessagePromptTemplate.from_template(human_prompt)
         ])
         modelo = init_chat_model("gemini-2.5-flash", model_provider="google_genai", temperature=temperatura)
-        cadena = prompt_template | modelo
-        respuesta_modelo = cadena.invoke(input_data)
-        texto_respuesta = respuesta_modelo.content if hasattr(respuesta_modelo, "content") else str(respuesta_modelo)
-        return texto_respuesta
+        respuesta = (prompt | modelo).invoke(input_data)
+        return respuesta.content if hasattr(respuesta, "content") else str(respuesta)
     except Exception as e:
-        return f"Error al generar respuesta con el modelo: {e}"
-
+        return f"❌ Error al generar respuesta: {e}"
 
 # =============================================================
-# FUNCIÓN PARA RESPUESTA A PARTIR DE FRAGMENTOS WEB
+# FUNCIÓN SECUNDARIA: RESPUESTA A PARTIR DE FRAGMENTOS WEB
 # =============================================================
 def generar_respuesta_web(pregunta: str, contexto: str) -> str:
-    prompt_web = ChatPromptTemplate.from_template("""
-A continuación se presentan fragmentos obtenidos en una búsqueda web sobre la siguiente pregunta del usuario:
+    prompt_web = ChatPromptTemplate.from_template(
+        """
+        Has recibido resultados de una búsqueda web sobre la siguiente pregunta:
 
-Pregunta: {pregunta}
+        🧠 Pregunta del usuario:
+        {pregunta}
 
-Fragmentos extraídos:
-{contexto}
+        🌐 Fragmentos encontrados:
+        {contexto}
 
-Tu tarea es generar una respuesta clara, precisa y basada exclusivamente en estos fragmentos. 
-No inventes ni extrapoles información. No expliques cómo funciona un modelo de lenguaje.
+        Redacta una respuesta clara y precisa basada SOLO en los fragmentos anteriores.
+        No inventes información. Usa este formato:
 
-Responde directamente en el siguiente formato, **sin duplicar encabezados**:
+        📘 Respuesta principal
+        <respuesta>
 
-📘 Respuesta principal
-<respuesta directa y verificable basada en los fragmentos>
-
-💡 Información adicional
-<añade contexto útil si aporta valor; si no lo hay, indícalo explícitamente>
-""")
-
+        💡 Información adicional
+        <si hay algo útil que añadir, escríbelo; si no, indica que no hay información adicional>
+        """
+    )
     try:
         modelo = init_chat_model("gemini-2.5-flash", model_provider="google_genai", temperature=0)
-        cadena = prompt_web | modelo
-        resultado = cadena.invoke({"pregunta": pregunta, "contexto": contexto})
-        return resultado.content
+        respuesta = (prompt_web | modelo).invoke({"pregunta": pregunta, "contexto": contexto})
+        return respuesta.content if hasattr(respuesta, "content") else str(respuesta)
     except Exception as e:
-        return f"Error al generar respuesta web: {e}"
+        return f"❌ Error al generar respuesta web: {e}"
