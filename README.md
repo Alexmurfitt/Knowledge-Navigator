@@ -1,149 +1,202 @@
-# Knowledge Navigator
+# 🧠 Knowledge Navigator – Sistema Inteligente de Asistencia Documental (v3)
 
-Asistente inteligente multimodal con IA generativa, razonamiento autónomo y escalabilidad profesional.
-
-# Enlace documento Google Drive:
-
-https://docs.google.com/document/d/1FdvMoNgEYl9LZxdObe8eGxLVGUH_rx3RiR9JgyT_tO8/edit?tab=t.js3ami4q4gx
-
-
-## 🌟 Descripción del Proyecto
-
-**AI Knowledge Navigator** es un sistema cognitivo avanzado diseñado para interpretar, sintetizar y responder con precisión a consultas complejas sobre documentos estructurados y no estructurados, mediante lenguaje natural. Combina:
-
-* RAG (Retrieval-Augmented Generation)
-* Agentes de razonamiento LangChain
-* OCR con modelos como Donut y LayoutLM
-* Transcripción por voz con WhisperX
-* Memoria vectorial personalizada (ChromaDB / MongoDB)
-
-Su misión es transformar información compleja en conocimiento útil y contextualizado, permitiendo una interacción fluida, natural y trazable con grandes volúmenes de información.
+Knowledge Navigator es una plataforma avanzada de asistencia documental impulsada por modelos de lenguaje generativo (LLMs) y arquitectura RAG (Retrieval-Augmented Generation), diseñada para responder preguntas complejas en lenguaje natural utilizando documentos internos, fuentes web externas y razonamiento contextual estructurado.
 
 ---
 
-## 🎮 Demo
+## 🎯 Objetivo del Sistema
 
-![Demo GIF](./assets/demo.gif)
+Knowledge Navigator permite a usuarios empresariales, técnicos o investigativos:
 
-[Ver video de demo](https://youtu.be/tu-enlace)
+* ✅ Consultar documentos extensos o técnicos en lenguaje natural.
+* ✅ Obtener respuestas claras, trazables y justificadas.
+* ✅ Evaluar automáticamente la calidad del razonamiento.
+* ✅ Subir, indexar y eliminar documentos en tiempo real.
+* ✅ Complementar el conocimiento interno con fuentes confiables externas.
 
----
-
-## 🚀 Funcionalidades Principales
-
-* ✅ Entrada por texto y voz (WhisperX)
-* 🔍 Búsqueda semántica en documentos (PDF/CSV/escaneados)
-* 🧠 Generación de respuestas con GPT-4o (OpenAI API)
-* 📅 Memoria vectorial por usuario
-* 🕵️ Agentes LangChain para razonamiento multietapas
-* 📄 OCR inteligente con Donut/LayoutLM
-* 📊 Panel de métricas y actividad
-* 🛡️ Seguridad JWT + cifrado AES256
+> Todo ello bajo una arquitectura modular, segura y escalable, ideal para entornos productivos o regulados.
 
 ---
 
-## ⚙️ Instalación y Requisitos
+## ⚙️ Tecnologías y Herramientas Clave
 
-git clone https://github.com/tuusuario/smartassistai.git
-cd smartassistai
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-streamlit run frontend/app.py
-
-
-### Requisitos
-
-* Python 3.10+
-* API Key de OpenAI (GPT-4)
-* MongoDB (local o Atlas)
-* (Opcional) Docker para despliegue
-
----
-
-## 🧪 Uso
-
-1. Abre la app con `streamlit run frontend/app.py`
-2. Sube un documento PDF, CSV o imagen escaneada
-3. Escribe o pronuncia una pregunta
-4. Obtendras una respuesta contextualizada y trazable
-
-**Ejemplo:**
-
-> "¿Cuál fue el EBITDA de Apple en 2022 según este informe PDF?"
+| Categoría                | Herramientas / Modelos                                  |
+| ------------------------ | ------------------------------------------------------- |
+| Lenguaje                 | Python 3.10+                                            |
+| Framework API            | FastAPI + Uvicorn                                       |
+| Almacenamiento Vectorial | Qdrant (API + filtros semánticos + indexado jerárquico) |
+| Embeddings               | OllamaEmbeddings con `mxbai-embed-large`                |
+| LLM principal            | Gemini 2.5 Flash (vía LangChain)                        |
+| Prompting                | LangChain `prompt_templates` + `LLMChain`               |
+| Evaluación RAG           | LangChain Evaluation + RAGAS (opcional)                 |
+| PDFs                     | PyMuPDF (`fitz`) + LangChain PDFLoader                  |
+| Búsqueda web externa     | GoogleSearchAPIWrapper (LangChain Community)            |
+| Seguridad                | `passlib[bcrypt]` + autenticación JWT opcional          |
+| WebSocket                | Para progreso de carga documental en tiempo real        |
+| DevOps                   | `.env`, Docker, estructura modular desacoplada          |
 
 ---
 
-## 🛠️ Arquitectura del Sistema
+## 🧱 Arquitectura General
 
-```mermaid
-graph TD
-    A[Usuario] -->|Texto / Voz / Documento| B[Frontend - Streamlit]
-    B --> C[Backend - FastAPI]
-    C --> D[OCR Engine (Donut/LayoutLM)]
-    C --> E[WhisperX Transcriber]
-    C --> F[LangChain RAG + Agents]
-    F --> G[Embeddings + ChromaDB]
-    F --> H[OpenAI GPT-4o API]
-    C --> I[Memoria vectorial por usuario]
-    C --> J[MongoDB: historial, resúmenes, alertas]
-    B --> K[Panel de métricas / actividad]
+```text
+             🧑 Usuario (cliente web, CLI o app externa)
+                        │
+                        ▼
+              ┌───────────────────────┐
+              │ FastAPI (main.py)     │
+              └─────────┬─────────────┘
+                        ▼
+       ┌────────────────────────────────────────────┐
+       │                Services/                   │
+       │ ┌────────────────────────────────────────┐ │
+       │ │ consultas.py        → Lógica principal   │ │
+       │ │ razonador.py        → Prompt + modelo   │ │
+       │ │ pdf_ingest.py       → Chunking + metadatos││
+       │ │ buscador_externo.py → Web CSE wrapper   │ │
+       │ │ evaluator.py         → Relevance check  │ │
+       │ └────────────────────────────────────────┘ │
+       └────────────────────────────────────────────┘
+                        │
+                        ▼
+              Qdrant Vector Store  +  Google CSE API
 ```
 
 ---
 
-## 🔧 Tecnologías Utilizadas
+## 🧩 Descripción de los Módulos Principales
 
-* 🧠 OpenAI GPT-4o
-* 🔍 LangChain + Agents + RAG
-* 🎤 WhisperX (entrada por voz)
-* 🔢 Donut / LayoutLM (OCR multimodal)
-* 🧼 ChromaDB / MongoDB (memoria semántica)
-* 🌐 Streamlit (frontend)
-* 🚀 FastAPI (backend)
-* 🛠️ Docker (despliegue)
+### `consultas.py`
+
+* Clasifica preguntas simples vs complejas.
+* Recupera contexto desde Qdrant.
+* Evalúa relevancia del contexto con `load_evaluator`.
+* Activa fallback web si es necesario.
+* Llama al razonador con el contexto adecuado.
+
+### `razonador.py`
+
+* Prompt estructurado para:
+
+  * Respuestas pedagógicas (modo completo).
+  * Respuestas directas (modo conciso).
+* Separación clara entre definición y explicación.
+
+### `pdf_ingest.py`
+
+* Procesamiento jerárquico con `fitz.get_toc()`.
+* Extracción de tablas y bloques etiquetados (`H1–H4`).
+* Chunking semántico con `RecursiveCharacterTextSplitter`.
+* Indexado en Qdrant con metadatos enriquecidos.
+
+### `buscador_externo.py`
+
+* Consultas a Google Custom Search API.
+* Limpieza, normalización y selección de snippets.
+* Devuelve snippets, títulos y enlaces de resultados.
+
+### `evaluator.py`
+
+* Evaluación automática con LangChain Evaluator (`relevance`).
+* Extensible a RAGAS (`faithfulness`, `precision`, `recall`).
 
 ---
 
-## 📆 Estado del Proyecto
+## 🔄 Flujo de Datos (Consulta)
 
-✅ MVP funcional completo. En fase de optimización y presentación final.
+1. 🧠 El usuario realiza una pregunta en lenguaje natural.
+2. 🧩 El sistema detecta si es una pregunta simple o compleja.
+3. 📚 Recupera contexto desde Qdrant.
+4. 🧪 Evalúa la utilidad del contexto recuperado.
+5. 🌐 Si no es relevante (o se solicita), activa búsqueda web.
+6. 🧠 Construye un prompt con historial, contexto y pregunta.
+7. 🤖 Genera respuesta con Gemini 2.5 Flash.
+8. 🔎 Separa: respuesta principal, explicación, fuentes.
+9. 💾 Guarda interacción en la memoria conversacional.
+10. ✅ Devuelve respuesta estructurada al cliente.
 
 ---
 
-## 📂 Estructura del Proyecto
+## 🧪 Flujo de Evaluación (opcional)
 
-## 📂 Estructura del Proyecto
+1. Evalúa `relevance` del contexto con evaluador LangChain.
+2. Si está activado RAGAS:
 
-Knowledge_Navigator/
-├── backend/
-│ ├── main.py
-│ ├── rag_engine.py
-│ ├── utils.py
-│ └── requirements.txt
-├── frontend/
-│ └── app.py
-├── data/
-│ ├── embeddings/
-│ ├── memory/
-│ └── pdfs/
-├── Scripts/
-├── tests/
-├── .env
-├── .gitignore
-├── Dockerfile
-├── requirements.txt
-└── README.md
+   * Calcula: `faithfulness`, `answer_relevancy`, `context_precision`, `context_recall`.
+   * Registra métricas en logs o dashboard.
 
-### Equipo
+---
 
-* Alexander Murfitt 
-* Aaron
-* Eugenio
+## 📥 Ingesta de PDFs
 
-## ✨ Bonus
+1. 📤 El usuario sube uno o varios archivos PDF.
+2. 🧭 Detecta marcadores (`TOC`) o analiza layout del documento.
+3. 🔍 Extrae:
 
-* [ ] ⚡ Badges (estado build, versión, licencia)
-* [ ] ❓ FAQ
-* [ ] 📊 CHANGELOG.md
-* [ ] 📅 Roadmap
+   * Tablas (convertidas a Markdown)
+   * Bloques de texto jerarquizados (H1, H2, ...)
+4. 🧠 Asigna metadatos enriquecidos: título, jerarquía, página, tipo.
+5. ✂️ Fragmenta el contenido en chunks semánticos.
+6. 🔗 Genera embeddings.
+7. 🚀 Indexa los chunks en Qdrant.
+
+---
+
+## 📦 Entradas y Salidas
+
+| Tipo    | Formato                                          |
+| ------- | ------------------------------------------------ |
+| Entrada | `str` (pregunta), `UploadFile` (PDFs)            |
+| Entrada | WebSocket (`filename`, `progress`)               |
+| Entrada | Autenticación (opcional): `username`, `password` |
+| Salida  | JSON: `respuesta`, `razonamiento`, `fuentes`     |
+| Salida  | Lista de mensajes de historial conversacional    |
+| Salida  | Evaluación de respuestas (relevance / RAGAS)     |
+
+---
+
+## 📑 Dependencias Recomendadas (`requirements.txt`)
+
+```txt
+fastapi
+uvicorn
+langchain
+langchain-google-genai
+langchain-qdrant
+langchain-community
+qdrant-client
+ragas
+fitz
+pymupdf
+python-dotenv
+passlib[bcrypt]
+```
+
+---
+
+## 🔐 Seguridad (opcional)
+
+* 🔐 Sistema de login/register con `passlib[bcrypt]`
+* 🔒 Claves de API protegidas mediante `.env`
+* 🧩 Filtros por `document_name_id` en Qdrant para eliminar documentos específicos
+* 🛡️ Autenticación JWT opcional para endpoints protegidos
+
+---
+
+## ✅ Conclusión
+
+Knowledge Navigator v3 es un sistema de asistencia documental moderno, modular y potente. Integra:
+
+* 🧠 Razonamiento generativo explicativo
+* 📚 Trazabilidad documental con metadatos
+* 📥 Ingesta semántica jerárquica
+* 🧪 Evaluación de calidad automática (opcional)
+* 🌐 Capacidad de ampliación con búsqueda web y seguridad
+
+Es ideal para entornos **corporativos, legales, educativos o regulados**, y puede:
+
+* Desplegarse como backend empresarial
+* Integrarse con una interfaz personalizada (SPA, chatbot, etc.)
+* O funcionar como motor semántico dentro de sistemas más amplios
+
+> ¡Una solución avanzada para navegar el conocimiento con inteligencia!
