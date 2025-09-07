@@ -18,16 +18,16 @@ from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from fastapi.responses import JSONResponse
 from fastapi import HTTPException
-
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-
-
 from langchain.docstore.document import Document
 import fitz
-
 from fastapi import WebSocket
 from typing import Dict
+
+# Al principio de main.py
+import re
+# ... el resto de tus importaciones
 
 # Conexiones WebSocket activas por archivo
 active_connections: Dict[str, WebSocket] = {}
@@ -219,12 +219,36 @@ def is_simple_question(question: str) -> bool:
         not any(term in question for term in exclusion_terms)
     )
 
+def parse_model_response(response_text: str):
+    """
+    Divide la respuesta del modelo de forma más robusta,
+    buscando los separadores con o sin asteriscos de Markdown.
+    """
+    main_answer = response_text
+    additional_info = None
+    separator_pattern = re.compile(r'\*\*?Información adicional\*\*?:\s*', re.IGNORECASE)
+    match = separator_pattern.search(response_text)
+
+    if match:
+        separator = match.group(0)
+        parts = response_text.split(separator, 1)
+        main_answer_raw = parts[0]
+        additional_info = parts[1].strip() if len(parts) > 1 else None
+        title_pattern = re.compile(r'\*\*?Respuesta a tu pregunta\*\*?:\s*', re.IGNORECASE)
+        title_match = title_pattern.search(main_answer_raw)
+        
+        if title_match:
+            main_answer = main_answer_raw.split(title_match.group(0), 1)[1].strip()
+        else:
+            main_answer = main_answer_raw.strip()
+    
+    return main_answer, additional_info
+
 class ChatRequest(BaseModel):
     question: str
     use_internet: bool = False  # valor por defecto si no se marca
 
 from langchain.chains import LLMChain
-
 from fastapi import HTTPException
 
 @app.post("/ask")
@@ -232,46 +256,33 @@ async def ask_bot(req: ChatRequest):
     global suggested_question, memory
 
     actual_prompt = req.question.lower().strip()
-    chat_history = memory.chat_memory  # historial conversacional en texto (string)
+    chat_history = memory.chat_memory
 
-    # 🔍 REGRA MANUAL — DETECTAR "cómo subir archivos"
-    if any(frase in actual_prompt for frase in [
-        "subir archivo", 
-        "subir archivos", 
-        "cómo subo", 
-        "cómo puedo subir", 
-        "dónde subo", 
-        "cómo cargar", 
-        "adjuntar documento"
-    ]):
+    # --- Regla Manual ---
+    if any(frase in actual_prompt for frase in ["subir archivo", "subir archivos", "cómo subo", "cómo puedo subir", "dónde subo", "cómo cargar", "adjuntar documento"]):
         respuesta_manual = "Puedes subir los archivos desde la pestaña Documentos, en la parte superior de la aplicación."
         memory.save_context({"input": req.question}, {"output": respuesta_manual})
         return {
             "answer": respuesta_manual,
+            "additional_info": None,  # <-- CAMBIO: Añadido para consistencia
             "suggested_question": None,
             "sources": [],
-            #"source_type": "Regla manual"
         }
 
-    # Clasificación de pregunta
+    # --- Lógica principal (simple, RAG, internet) ---
+    final_response = ""
+    final_sources = []
+    
     simple = is_simple_question(actual_prompt)
-
     if simple and not req.use_internet:
-        # Pregunta simple: incluye historial en el prompt
-        simple_prompt = f"""Historial de conversación: {chat_history}
-        Pregunta: {actual_prompt}
-        Respuesta:"""
+        simple_prompt = f"""Historial de conversación: {chat_history}\nPregunta: {actual_prompt}\nRespuesta:"""
         final_response = model.invoke(simple_prompt).content
         final_sources = []
-        source_type = "Modelo Lenguaje"
-
     else:
-        # Recupera docs para contexto
         vector_retriever = vector_store.as_retriever(search_kwargs={'k': 6})
         context_docs = vector_retriever.get_relevant_documents(actual_prompt)
         context_text = "\n".join([doc.page_content for doc in context_docs])
-
-        # Prompt con memoria, contexto y pregunta
+        
         rag_prompt = PromptTemplate(
             template="""
             Eres un asistente de IA experto en definiciones normativas y conceptos técnicos.
@@ -281,9 +292,7 @@ async def ask_bot(req: ChatRequest):
             **Información adicional**: <una explicación detallada y pedagógica del concepto, aportando contexto adicional>
 
             El tono debe ser profesional, claro y pedagógico.
-
             Además de usar los documentos proporcionados como contexto, debes saber que si no encuentras información suficiente, puedes apoyarte en búsquedas en Internet cuando esté habilitado por el sistema.
-
             Historial de conversación: {chat_history}
             Contexto: {context}
             Pregunta: {question}
@@ -291,50 +300,48 @@ async def ask_bot(req: ChatRequest):
             """,
             input_variables=["chat_history", "context", "question"]
         )
-
         llm_chain = LLMChain(llm=model, prompt=rag_prompt)
-
-        rag_answer = llm_chain.run({
-            "chat_history": chat_history,
-            "context": context_text,
-            "question": actual_prompt
-        })
-
+        rag_answer = llm_chain.run({"chat_history": chat_history, "context": context_text, "question": actual_prompt})
         sources = [doc.dict() for doc in context_docs]
 
         if req.use_internet or Sin_Informacion in rag_answer:
             search_results = search_tool.run(actual_prompt)
-
             internet_prompt = f"""Eres un asistente de IA. Basándote en el historial de la conversación y los siguientes resultados de una búsqueda en Internet, 
             responde a la "Pregunta nueva" del usuario de una forma amable y útil.
             Historial de la conversación: {chat_history}
             Resultados de búsqueda: "{search_results}"
             Pregunta nueva: {actual_prompt}
             Respuesta final:"""
-
             final_response = model.invoke(internet_prompt).content
             final_sources = []
-            source_type = "Internet"
         else:
             final_response = rag_answer
             final_sources = sources
-            source_type = "Documentos"
 
-    # Guardar contexto y sugerencias
-    if '?' in final_response:
-        potential_question = final_response.split('?')[-1].strip()
+    # =================================================================
+    # CAMBIO CRUCIAL: USAMOS LA FUNCIÓN DE PARSEO AQUÍ
+    # =================================================================
+    
+    # 1. Separamos la respuesta obtenida en dos partes
+    parsed_answer, additional_info = parse_model_response(final_response)
+
+    # 2. Guardamos solo la respuesta limpia en la memoria
+    memory.save_context({"input": req.question}, {"output": parsed_answer})
+    
+    # (Opcional) Lógica para sugerir preguntas
+    if '?' in parsed_answer:
+        potential_question = parsed_answer.split('?')[-1].strip()
         if len(potential_question) > 5:
             suggested_question = potential_question
     else:
         suggested_question = None
 
-    memory.save_context({"input": req.question}, {"output": final_response})
-
+    # 3. Devolvemos el JSON con los campos ya separados
     return {
-        "answer": final_response,
+        "answer": parsed_answer,
+        "additional_info": additional_info,
         "suggested_question": suggested_question,
         "sources": final_sources,
-        #"source_type": source_type
     }
 
 
