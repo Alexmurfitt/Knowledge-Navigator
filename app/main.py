@@ -24,10 +24,10 @@ from langchain.docstore.document import Document
 import fitz
 from fastapi import WebSocket
 from typing import Dict
-
+from app.drive_untils import upload_file_to_drive
 # Al principio de main.py
 import re
-# ... el resto de tus importaciones
+from datetime import datetime
 
 # Conexiones WebSocket activas por archivo
 active_connections: Dict[str, WebSocket] = {}
@@ -160,7 +160,7 @@ def extract_blocks_by_layout(doc):  #Nueva funcion
                 blocks.append({"page": page_num + 1, "type": block_type, "content": block_text})
     return blocks
 
-def create_langchain_chunks(structured_blocks, pdf_filename, bookmark_map=None):    # Nueva funcion
+def create_langchain_chunks(structured_blocks, pdf_filename, upload_date_str, bookmark_map=None):    # Nueva funcion
     """Crea los chunks finales para LangChain."""
     final_chunks = []
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
@@ -182,6 +182,7 @@ def create_langchain_chunks(structured_blocks, pdf_filename, bookmark_map=None):
         metadata = {
             "document_name_id": pdf_filename,
             "page_number": page_number,
+            "upload_date": upload_date_str,
             "content_type": block['type'],
             "title_hierarchy": current_hierarchy
         }
@@ -380,11 +381,15 @@ canceled_uploads = {}  # {"nombre.pdf": True}
 @app.post("/upload")
 async def upload_pdfs(files: List[UploadFile] = File(...)):
     """
-    Endpoint para subir archivos PDF con verificación de cancelación en tiempo real.
+    Endpoint para subir archivos PDF.
     """
     all_final_chunks = []
     try:
         print("📥 Archivos recibidos:", [f.filename for f in files])
+
+        # NUEVO: Obtenemos la fecha y hora actual UNA SOLA VEZ para todos los archivos de esta subida
+        upload_date = datetime.now().strftime('%Y-%m-%d')
+        print(f"Fecha de subida para estos archivos: {upload_date}")
 
         for uploaded_file in files:
             filename = uploaded_file.filename
@@ -395,6 +400,11 @@ async def upload_pdfs(files: List[UploadFile] = File(...)):
             file_content = await uploaded_file.read()
             print(f"Tamaño del archivo leído: {len(file_content)} bytes")
 
+            # --- SUBIDA A GOOGLE DRIVE (Opcional) ---
+            # drive_file_id = upload_file_to_drive(file_content, filename)
+            # if not drive_file_id:
+            #     print(f"⚠️  Advertencia: No se pudo subir el archivo '{filename}' a Google Drive.")
+            
             uploaded_file.file.seek(0)
 
             structured_blocks = []
@@ -411,22 +421,18 @@ async def upload_pdfs(files: List[UploadFile] = File(...)):
 
             print(f"-> Se procesaron {len(structured_blocks)} bloques de '{filename}'.")
 
-            # Crear los chunks
-            file_chunks = create_langchain_chunks(structured_blocks, filename, bookmark_map)
+            # CAMBIO: Pasamos la fecha de subida al crear los chunks
+            file_chunks = create_langchain_chunks(structured_blocks, filename, upload_date, bookmark_map)
 
             all_final_chunks.extend(file_chunks)
-
-            # ✅ Limpieza de bandera por si todo salió bien
             canceled_uploads.pop(filename, None)
 
         if not all_final_chunks:
-            return JSONResponse(content={"message": "No se pudo extraer contenido procesable de los archivos o todos fueron cancelados."}, status_code=400)
+            return JSONResponse(content={"message": "No se pudo extraer contenido procesable de los archivos."}, status_code=400)
 
-        # Subida a Qdrant
         print(f"\n📤 Subiendo un total de {len(all_final_chunks)} chunks a Qdrant...")
         crear_indice(collection_name=collection_name)
         
-
         global vector_store
         if vector_store is None:
             print("📌 Vector store no inicializado, creando uno nuevo...")
@@ -434,13 +440,10 @@ async def upload_pdfs(files: List[UploadFile] = File(...)):
         else:
             print("📌 Vector store ya inicializado.")
 
-        total_chunks = len(all_final_chunks)
-        for i, chunk in enumerate(all_final_chunks):
-            vector_store.add_documents([chunk])
-            porcentaje = int(((i + 1) / total_chunks) * 100)
-            await enviar_progreso(chunk.metadata["document_name_id"], porcentaje)
-
-
+        # Subimos todos los chunks en un solo lote para mayor eficiencia
+        vector_store.add_documents(all_final_chunks)
+        print(f"✅ {len(all_final_chunks)} chunks subidos a Qdrant con éxito.")
+        
         return JSONResponse(
             content={"message": f"{len(all_final_chunks)} fragmentos de {len(files)} archivo(s) cargados correctamente."},
             status_code=200
@@ -451,6 +454,7 @@ async def upload_pdfs(files: List[UploadFile] = File(...)):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error al procesar los archivos: {e}")
+
 
 def crear_vectorstore(collection_name: str):
     return QdrantVectorStore(
@@ -497,30 +501,30 @@ async def eliminar_pdf_qdrant(collection_name: str, pdf_nombre: str):
 @app.get("/documentos_unicos/{collection_name}")
 async def mostrar_documentos_unicos(collection_name: str):
     try:
-        client = QdrantClient(
-            url=url, 
-            api_key=api_key
-        )
-
-        scrolled_points, llamada= client.scroll( # La "llamada" es porque client.scroll devuelve (puntos, llamada) y la llamada es para la siguiente llamda (no se necesita para nada), es decir me devuelve una tupla de 2 valores, Puntos y llamada
+        client = QdrantClient(url=url, api_key=api_key)
+        scrolled_points, _ = client.scroll(
             collection_name=collection_name,
-            limit=10000,    # El limit es la cantidad de endpoint que quiero ver
-            with_payload=True   #Awui esta incluyendo los metadatos
+            limit=10000,
+            with_payload=True
         )
 
-        document_names = set()  #En vez de un diccionario o una lista pongo un set ya que almacena documentos unicos
+        document_info = {}
         for point in scrolled_points:
-            if point.payload and "metadata" in point.payload:   #Si hay payload y metadata esta dentro de payload (Lo de metadata es dentro de los metadatos hay un campo llamado metadata y dentro estan el resto de variables)
-                # 2. Buscamos 'document_name_id' DENTRO de 'metadata'
-                metadata_dict = point.payload["metadata"]
-                if "document_name_id" in metadata_dict: #Si dentro de metadata esta document_name_id
-                    document_names.add(metadata_dict["document_name_id"])   #Lo añadimos al set
+            if point.payload and "metadata" in point.payload:
+                metadata = point.payload["metadata"]
+                doc_name = metadata.get("document_name_id")
+                
+                if doc_name and doc_name not in document_info:
+                    upload_date = metadata.get("upload_date", "Fecha no disponible")
+                    document_info[doc_name] = {
+                        "name": doc_name,
+                        "upload_date": upload_date
+                    }
 
-        return sorted(list(document_names))
-
-
+        sorted_documents = sorted(list(document_info.values()), key=lambda x: x['name'])
+        return sorted_documents
     except Exception as e:
-        print(f"Ha ocurrido un error: {e}")
+        print(f"Ha ocurrido un error en /documentos_unicos: {e}")
         return []
 
 

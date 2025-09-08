@@ -22,8 +22,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Simulate authentication
     const mockUser: User = {
       id: '1',
-      name: 'John Doe',
-      email: 'john.doe@company.com'
+      name: 'Aaron',
+      email: 'aaron@company.com'
     };
     setUser(mockUser);
     setIsAuthenticated(true);

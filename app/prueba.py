@@ -1,68 +1,80 @@
-from fastapi import FastAPI, UploadFile, File, Form
-from pydantic import BaseModel
-from typing import List
-import tempfile
 import os
 from dotenv import load_dotenv
-from fastapi.middleware.cors import CORSMiddleware
-from qdrant_client import QdrantClient, models  #Añadido por Aaron
-from langchain_qdrant import QdrantVectorStore, RetrievalMode
-from langchain_ollama import OllamaEmbeddings
-from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.prompts import PromptTemplate
-from langchain.chat_models import init_chat_model
-from langchain.chains import RetrievalQA
-from langchain_community.utilities.google_search import GoogleSearchAPIWrapper
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationalRetrievalChain
-from fastapi.responses import JSONResponse
-from fastapi import HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from langchain.docstore.document import Document
-import fitz
-from fastapi import WebSocket
-from typing import Dict
+# Importamos las dos funciones que necesitamos de drive_utils
+from drive_untils import get_drive_service, upload_file_to_drive
 
-# Al principio de main.py
-import re
+def run_test():
+    """
+    Script de prueba que carga las variables de entorno y las pasa
+    como argumentos a las funciones de utilidad de Drive.
+    """
+    print("--- Iniciando prueba de subida a Google Drive ---")
+    
+    load_dotenv()
 
-load_dotenv()
+    print("\n--- Verificando variables de entorno de Drive ---")
+    cred_path = os.getenv('GOOGLE_DRIVE_CREDENTIALS_PATH')
+    folder_id = os.getenv('GOOGLE_DRIVE_FOLDER_ID')
+    # Lee el email del propietario desde el .env aquí
+    owner_email = os.getenv('GOOGLE_ACCOUNT_EMAIL')
+    
+    print(f"Ruta de credenciales: {cred_path}")
+    print(f"ID de la carpeta: {folder_id}")
+    print(f"Email del propietario: {owner_email}")
+    print("---------------------------------------------\n")
 
-google_api_key=os.getenv("GOOGLE-API-KEY")
-url=os.getenv("QDRANT-URL")
-api_key=os.getenv("QDRANT-API-KEY")
-search_api_key = os.getenv("GOOGLE-SEARCH-API-KEY")
-google_cse_id = os.getenv("GOOGLE-SEARCH-ID")
-collection_name = os.getenv("COLLECTION-NAME")
-def mostrar_documentos_unicos():
-    try:
-        client = QdrantClient(
-            url=url, 
-            api_key=api_key
-        )
+    if not all([cred_path, folder_id, owner_email]):
+        print("🔴 ERROR CRÍTICO: Falta una o más variables de entorno (PATH, FOLDER_ID, EMAIL).")
+        print("   Por favor, revisa tu archivo .env.")
+        return
 
-        scrolled_points, llamada= client.scroll( # La "llamada" es porque client.scroll devuelve (puntos, llamada) y la llamada es para la siguiente llamda (no se necesita para nada), es decir me devuelve una tupla de 2 valores, Puntos y llamada
-            collection_name=collection_name,
-            limit=10000,    # El limit es la cantidad de endpoint que quiero ver
-            with_payload=True   #Awui esta incluyendo los metadatos
-        )
+    print("Autenticando con Google Drive...")
+    drive_service = get_drive_service(credentials_path=cred_path)
 
-        document_names = set()  #En vez de un diccionario o una lista pongo un set ya que almacena documentos unicos
-        for point in scrolled_points:
-            if point.payload and "metadata" in point.payload:   #Si hay payload y metadata esta dentro de payload (Lo de metadata es dentro de los metadatos hay un campo llamado metadata y dentro estan el resto de variables)
-                # 2. Buscamos 'document_name_id' DENTRO de 'metadata'
-                metadata_dict = point.payload["metadata"]
-                if "document_name_id" in metadata_dict: #Si dentro de metadata esta document_name_id
-                    document_names.add(metadata_dict["document_name_id"])   #Lo añadimos al set
-        print(f"Documentos únicos encontrados: {document_names}")
+    if not drive_service:
+        print("🔴 LA PRUEBA FALLÓ: No se pudo autenticar el servicio de Drive.")
+        return
+    else:
+        print("✅ Servicio de Google Drive autenticado correctamente.")
 
-        return sorted(list(document_names))
+    dummy_file_content = "Este es un archivo de prueba generado por el script de diagnóstico.".encode('utf-8')
+    dummy_filename = "archivo_de_prueba.txt"
+
+    print(f"\n☁️ Subiendo '{dummy_filename}' a Google Drive...")
+    file_id = upload_file_to_drive(
+        service=drive_service, 
+        folder_id=folder_id, 
+        file_content=dummy_file_content, 
+        filename=dummy_filename,
+        owner_email=owner_email  # Pasa el email como argumento aquí
+    )
+
+    if file_id:
+        print(f"✅ Archivo '{dummy_filename}' subido con éxito a Drive. ID: {file_id}")
+        print("\n" + "="*50)
+        print("🎉 ¡LA PRUEBA FUE EXITOSA!")
+        print("="*50)
+    else:
+        print("\n" + "="*50)
+        print("🔴 LA PRUEBA FALLÓ.")
+        print("="*50)
+
+if __name__ == "__main__":
+    run_test()
 
 
-    except Exception as e:
-        print(f"Ha ocurrido un error: {e}")
-        return []
 
-documentos_unicos = mostrar_documentos_unicos()
+
+
+
+
+
+metadata = {
+    # ... (tus otros metadatos)
+    # NUEVO: Añadimos la fecha de subida a los metadatos de cada chunk
+    "upload_date": upload_date_str 
+}
+    * Finalmente, en el endpoint `/upload`, al llamar a esta función, ahora le pasamos la fecha que capturamos antes:
+```python
+# CAMBIO: Pasamos la fecha de subida al crear los chunks
+file_chunks = create_langchain_chunks(structured_blocks, filename, upload_date, bookmark_map)
