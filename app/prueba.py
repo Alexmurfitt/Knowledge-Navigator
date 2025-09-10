@@ -78,3 +78,58 @@ metadata = {
 ```python
 # CAMBIO: Pasamos la fecha de subida al crear los chunks
 file_chunks = create_langchain_chunks(structured_blocks, filename, upload_date, bookmark_map)
+
+Assistant Avatar
+DOCUMENT ASSISTANT
+Internet
+
+Assistant Avatar
+¡Hola! Soy tu Asistente de Documentos. Puedo ayudarte a encontrar información en tus archivos. ¿Qué te gustaría saber?
+
+12:21:37
+
+Me gustaría saber que derechos tienen los Jefes de Cocina
+
+12:23:21
+
+Assistant Avatar
+Los jefes de cocina tienen derecho a condiciones de trabajo seguras y saludables en el área de cocina, a la libertad creativa en el desarrollo de sus funciones dentro de los valores del hotel, y al respeto de todos sus derechos laborales, incluso si son personal subcontratado, recayendo en la empresa principal (el hotel) la obligación de verificar dicho cumplimiento.
+
+
+12:23:34
+
+Me podrías pasar el correo electrónico del Jefe de Cocina del Hotel bambino?
+
+12:24:26
+
+Assistant Avatar
+Los correos electrónicos de los Jefes/as de Cocina del Hotel Bambino son: laura.fernández@hotelbambino.com, ana.gómez@hotelbambino.com y elena.vidal@hotelbambino.com.
+
+
+12:24:31
+
+En qué turno trabaja Elena Vidal en el Hotel Bambino?
+
+12:26:03
+
+Assistant Avatar
+La información sobre el turno de trabajo de Elena Vidal no se encuentra disponible en los documentos proporcionados.
+
+
+12:26:10
+
+A qué Sector pertenece Elena Vidal?
+
+12:26:36
+
+Assistant Avatar
+Elena Vidal pertenece al sector de cocina, ya que es una de las Jefas de Cocina del Hotel Bambino.
+
+12:26:38
+
+A que tienen derecho los trabajadores que deban trabajar en días festivos?
+
+12:28:10
+
+Assistant Avatar
+Los empleados que deban trabajar en días festivos tienen derecho a una compensación adicional o a un descanso equivalente.
